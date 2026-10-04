@@ -912,6 +912,223 @@ async function runTests() {
     assert('User 2 order total is correct', user2OrderRes.body.data.totalAmount === '100.00');
     assert('User 2 order has own item quantity', user2OrderRes.body.data.items[0].quantity === 2);
 
+    console.log('\n--- 11. Testing Payment Module ---');
+    // 1. Payment APIs require authentication
+    const unauthPaymentCreateRes = await request('POST', '/api/payments');
+    assert('POST /api/payments without token returns 401', unauthPaymentCreateRes.status === 401);
+
+    const unauthPaymentGetRes = await request('GET', '/api/payments/non-existing-payment-id');
+    assert('GET /api/payments/:id without token returns 401', unauthPaymentGetRes.status === 401);
+
+    const unauthOrderPaymentRes = await request('GET', `/api/orders/${user2OrderRes.body.data.id}/payment`);
+    assert('GET /api/orders/:orderId/payment without token returns 401', unauthOrderPaymentRes.status === 401);
+
+    const invalidTokenPaymentRes = await request('POST', '/api/payments', null, {
+      Authorization: 'Bearer invalid-token',
+    });
+    assert('POST /api/payments with invalid token returns 401', invalidTokenPaymentRes.status === 401);
+
+    // 2. Payment validation
+    const missingOrderIdPaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { paymentMethod: 'UPI' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Payment with missing orderId returns 400', missingOrderIdPaymentRes.status === 400);
+
+    const missingMethodPaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: createdOrderId },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Payment with missing paymentMethod returns 400', missingMethodPaymentRes.status === 400);
+
+    const unsupportedMethodPaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: createdOrderId, paymentMethod: 'CASH_ON_DELIVERY' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Payment with unsupported paymentMethod returns 400', unsupportedMethodPaymentRes.status === 400);
+
+    const nonExistingOrderPaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: 'non-existing-order-id', paymentMethod: 'UPI' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Payment for non-existing order returns 404', nonExistingOrderPaymentRes.status === 404);
+
+    // 3. Create a new user 1 order for payment tests
+    await request('DELETE', '/api/cart', null, { Authorization: `Bearer ${token1}` });
+    await request(
+      'POST',
+      '/api/cart/items',
+      { productId: burger.id, quantity: 1 },
+      { Authorization: `Bearer ${token1}` }
+    );
+    await request(
+      'POST',
+      '/api/cart/items',
+      { productId: coffee.id, quantity: 2 },
+      { Authorization: `Bearer ${token1}` }
+    );
+    const paymentOrderRes = await request('POST', '/api/orders', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('Created fresh order for payment tests', paymentOrderRes.status === 201);
+    const paymentOrderId = paymentOrderRes.body.data.id;
+
+    const orderPaymentBeforeCreateRes = await request('GET', `/api/orders/${paymentOrderId}/payment`, null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET /api/orders/:orderId/payment returns 404 before payment exists', orderPaymentBeforeCreateRes.status === 404);
+
+    const paymentCountBeforeCreate = await prisma.payment.count();
+    const createPaymentRes = await request(
+      'POST',
+      '/api/payments',
+      {
+        orderId: paymentOrderId,
+        paymentMethod: 'UPI',
+        userId: 'spoofed-user-id',
+        amount: '1.00',
+        currency: 'USD',
+        status: 'SUCCESS',
+        transactionId: 'client-txn-id',
+        gatewayReference: 'client-gateway-reference',
+        cardNumber: '4111111111111111',
+        cvv: '123',
+      },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('POST /api/payments for own order returns 201', createPaymentRes.status === 201);
+    assert('Payment response has correct orderId', createPaymentRes.body.data.orderId === paymentOrderId);
+    assert('Payment amount uses Order.totalAmount', createPaymentRes.body.data.amount === '180.00');
+    assert('Payment currency is INR', createPaymentRes.body.data.currency === 'INR');
+    assert('Payment method is UPI', createPaymentRes.body.data.paymentMethod === 'UPI');
+    assert('Payment initial status is PENDING', createPaymentRes.body.data.status === 'PENDING');
+    assert('Client supplied SUCCESS status is ignored', createPaymentRes.body.data.status !== 'SUCCESS');
+    assert('Client supplied amount is ignored', createPaymentRes.body.data.amount !== '1.00');
+    assert('Client supplied currency is ignored', createPaymentRes.body.data.currency !== 'USD');
+    assert('Client supplied transactionId is ignored', createPaymentRes.body.data.transactionId === null);
+    assert('Client supplied gatewayReference is ignored', createPaymentRes.body.data.gatewayReference === null);
+    assert('Payment response does not expose card number', createPaymentRes.body.data.cardNumber === undefined);
+    assert('Payment response does not expose CVV', createPaymentRes.body.data.cvv === undefined);
+    assert('Payment count increased by one', (await prisma.payment.count()) === paymentCountBeforeCreate + 1);
+
+    const paymentId = createPaymentRes.body.data.id;
+    const dbPayment = await prisma.payment.findUnique({ where: { id: paymentId } });
+    assert('Payment is persisted in database', !!dbPayment);
+    assert('Database payment amount equals order total', dbPayment && dbPayment.amount.toFixed(2) === paymentOrderRes.body.data.totalAmount);
+    assert('Database payment transactionId remains null', dbPayment && dbPayment.transactionId === null);
+    assert('Database payment gatewayReference remains null', dbPayment && dbPayment.gatewayReference === null);
+
+    // 4. Duplicate pending payment returns existing payment instead of creating another
+    const duplicatePendingPaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: paymentOrderId, paymentMethod: 'CARD' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Duplicate PENDING payment request returns 200', duplicatePendingPaymentRes.status === 200);
+    assert('Duplicate PENDING payment returns existing payment id', duplicatePendingPaymentRes.body.data.id === paymentId);
+    assert('Duplicate PENDING payment does not create another payment', (await prisma.payment.count({ where: { orderId: paymentOrderId } })) === 1);
+
+    // 5. Payment retrieval and ownership checks
+    const getOwnPaymentRes = await request('GET', `/api/payments/${paymentId}`, null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET /api/payments/:id returns own payment', getOwnPaymentRes.status === 200);
+    assert('GET /api/payments/:id has matching id', getOwnPaymentRes.body.data.id === paymentId);
+
+    const getOrderPaymentRes = await request('GET', `/api/orders/${paymentOrderId}/payment`, null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET /api/orders/:orderId/payment returns own payment', getOrderPaymentRes.status === 200);
+    assert('GET /api/orders/:orderId/payment has matching payment id', getOrderPaymentRes.body.data.id === paymentId);
+
+    const crossUserPaymentCreateRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: paymentOrderId, paymentMethod: 'UPI' },
+      { Authorization: `Bearer ${token2}` }
+    );
+    assert('User 2 cannot create payment for User 1 order', crossUserPaymentCreateRes.status === 404);
+
+    const crossUserGetPaymentRes = await request('GET', `/api/payments/${paymentId}`, null, {
+      Authorization: `Bearer ${token2}`,
+    });
+    assert('User 2 cannot read User 1 payment by id', crossUserGetPaymentRes.status === 404);
+
+    const crossUserOrderPaymentRes = await request('GET', `/api/orders/${paymentOrderId}/payment`, null, {
+      Authorization: `Bearer ${token2}`,
+    });
+    assert('User 2 cannot read User 1 payment through order endpoint', crossUserOrderPaymentRes.status === 404);
+
+    const missingPaymentRes = await request('GET', '/api/payments/non-existing-payment-id', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET non-existing payment returns 404', missingPaymentRes.status === 404);
+
+    // 6. Already successfully paid order cannot create another payment
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: { status: 'SUCCESS' },
+    });
+    const successDuplicatePaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: paymentOrderId, paymentMethod: 'UPI' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Payment for already paid order returns 409', successDuplicatePaymentRes.status === 409);
+    assert('Already paid order still has only one payment', (await prisma.payment.count({ where: { orderId: paymentOrderId } })) === 1);
+
+    // 7. Cancelled and invalid order states are not eligible for payment
+    const cancelledOrder = await prisma.order.create({
+      data: {
+        userId: user1Id,
+        status: 'CANCELLED',
+        totalAmount: 75.00,
+      },
+    });
+    const cancelledOrderPaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: cancelledOrder.id, paymentMethod: 'UPI' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Payment for cancelled order returns 400', cancelledOrderPaymentRes.status === 400);
+
+    const completedOrder = await prisma.order.create({
+      data: {
+        userId: user1Id,
+        status: 'COMPLETED',
+        totalAmount: 85.00,
+      },
+    });
+    const invalidStatePaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: completedOrder.id, paymentMethod: 'UPI' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Payment for invalid order state returns 400', invalidStatePaymentRes.status === 400);
+
+    // 8. User 2 can create payment for own order independently
+    const user2PaymentRes = await request(
+      'POST',
+      '/api/payments',
+      { orderId: user2OrderRes.body.data.id, paymentMethod: 'WALLET' },
+      { Authorization: `Bearer ${token2}` }
+    );
+    assert('User 2 can create payment for own order', user2PaymentRes.status === 201);
+    assert('User 2 payment amount is correct', user2PaymentRes.body.data.amount === user2OrderRes.body.data.totalAmount);
+    assert('User 2 payment method is WALLET', user2PaymentRes.body.data.paymentMethod === 'WALLET');
+
     console.log('\n========================================');
     const total = results.length;
     const passed = results.filter((r) => r.pass).length;
