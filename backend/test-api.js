@@ -687,6 +687,231 @@ async function runTests() {
     assert('User records remain intact in database', userCount >= 2);
     assert('Product records remain intact in database', productCount >= 3);
 
+    console.log('\n--- 10. Testing Order Module ---');
+    // 1. Order APIs require authentication
+    const unauthCreateOrderRes = await request('POST', '/api/orders');
+    assert('POST /api/orders without token returns 401', unauthCreateOrderRes.status === 401);
+
+    const unauthListOrdersRes = await request('GET', '/api/orders');
+    assert('GET /api/orders without token returns 401', unauthListOrdersRes.status === 401);
+
+    const unauthGetOrderRes = await request('GET', '/api/orders/non-existing-order-id');
+    assert('GET /api/orders/:id without token returns 401', unauthGetOrderRes.status === 401);
+
+    const invalidTokenOrdersRes = await request('GET', '/api/orders', null, {
+      Authorization: 'Bearer invalid-token',
+    });
+    assert('GET /api/orders with invalid token returns 401', invalidTokenOrdersRes.status === 401);
+
+    // 2. Empty cart cannot create order
+    const orderCountBeforeEmpty = await prisma.order.count({ where: { userId: user1Id } });
+    const emptyOrderRes = await request('POST', '/api/orders', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('POST /api/orders with empty cart returns 400', emptyOrderRes.status === 400);
+    assert('Empty cart order response says cart is empty', emptyOrderRes.body.message === 'Cart is empty');
+    const orderCountAfterEmpty = await prisma.order.count({ where: { userId: user1Id } });
+    assert('No order is created from empty cart', orderCountAfterEmpty === orderCountBeforeEmpty);
+
+    // 3. Create order from a valid cart with multiple items
+    const orderCartBefore = await request('GET', '/api/cart', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    const orderCartId = orderCartBefore.body.data.cartId;
+
+    await request(
+      'POST',
+      '/api/cart/items',
+      { productId: burger.id, quantity: 2 },
+      { Authorization: `Bearer ${token1}` }
+    );
+    await request(
+      'POST',
+      '/api/cart/items',
+      { productId: coffee.id, quantity: 1 },
+      { Authorization: `Bearer ${token1}` }
+    );
+
+    const orderCountBeforeCreate = await prisma.order.count({ where: { userId: user1Id } });
+    const createOrderRes = await request(
+      'POST',
+      '/api/orders',
+      {
+        userId: 'spoofed-user-id',
+        totalAmount: '0.01',
+        price: '0.01',
+      },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('POST /api/orders with valid cart returns 201', createOrderRes.status === 201);
+    assert('Created order status is PENDING', createOrderRes.body.data.status === 'PENDING');
+    assert('Created order has two order items', createOrderRes.body.data.items.length === 2);
+    assert('Created order total uses database prices', createOrderRes.body.data.totalAmount === '210.00');
+    assert('Client supplied totalAmount is ignored', createOrderRes.body.data.totalAmount !== '0.01');
+
+    const createdOrderId = createOrderRes.body.data.id;
+    const burgerOrderItem = createOrderRes.body.data.items.find((i) => i.product.id === burger.id);
+    const coffeeOrderItemForCreate = createOrderRes.body.data.items.find((i) => i.product.id === coffee.id);
+    assert('Burger order item quantity is 2', burgerOrderItem && burgerOrderItem.quantity === 2);
+    assert('Coffee order item quantity is 1', coffeeOrderItemForCreate && coffeeOrderItemForCreate.quantity === 1);
+    assert('Burger price snapshot is "80.00"', burgerOrderItem && burgerOrderItem.price === '80.00');
+    assert('Coffee price snapshot is "50.00"', coffeeOrderItemForCreate && coffeeOrderItemForCreate.price === '50.00');
+    assert('Burger item total is "160.00"', burgerOrderItem && burgerOrderItem.itemTotal === '160.00');
+    assert('Coffee item total is "50.00"', coffeeOrderItemForCreate && coffeeOrderItemForCreate.itemTotal === '50.00');
+
+    const dbCreatedOrder = await prisma.order.findUnique({
+      where: { id: createdOrderId },
+      include: { items: true },
+    });
+    assert('Order is persisted in database', !!dbCreatedOrder);
+    assert('Order belongs to authenticated user only', dbCreatedOrder && dbCreatedOrder.userId === user1Id);
+    assert('Order total is persisted as "210.00"', dbCreatedOrder && dbCreatedOrder.totalAmount.toFixed(2) === '210.00');
+    assert('OrderItems are persisted in database', dbCreatedOrder && dbCreatedOrder.items.length === 2);
+    assert('Order count increased by one', (await prisma.order.count({ where: { userId: user1Id } })) === orderCountBeforeCreate + 1);
+
+    const cartAfterOrderRes = await request('GET', '/api/cart', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('Cart is empty after successful order', cartAfterOrderRes.body.data.items.length === 0);
+    assert('Cart totalItems is 0 after successful order', cartAfterOrderRes.body.data.totalItems === 0);
+    assert('Cart record remains after successful order', cartAfterOrderRes.body.data.cartId === orderCartId);
+
+    // 4. Users can list and read only their own orders
+    const listOrdersRes = await request('GET', '/api/orders', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET /api/orders returns 200', listOrdersRes.status === 200);
+    assert('GET /api/orders returns an array', Array.isArray(listOrdersRes.body.data));
+    assert('GET /api/orders includes created order', listOrdersRes.body.data.some((o) => o.id === createdOrderId));
+
+    const getOwnOrderRes = await request('GET', `/api/orders/${createdOrderId}`, null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET /api/orders/:id returns own order', getOwnOrderRes.status === 200);
+    assert('GET /api/orders/:id has matching id', getOwnOrderRes.body.data.id === createdOrderId);
+    assert('GET /api/orders/:id returns order items', getOwnOrderRes.body.data.items.length === 2);
+
+    const getUser2OrdersRes = await request('GET', '/api/orders', null, {
+      Authorization: `Bearer ${token2}`,
+    });
+    assert('User 2 GET /api/orders returns 200', getUser2OrdersRes.status === 200);
+    assert('User 2 order list does not include User 1 order', !getUser2OrdersRes.body.data.some((o) => o.id === createdOrderId));
+
+    const crossGetOrderRes = await request('GET', `/api/orders/${createdOrderId}`, null, {
+      Authorization: `Bearer ${token2}`,
+    });
+    assert('User 2 reading User 1 order returns 404', crossGetOrderRes.status === 404);
+
+    const nonExistingOrderRes = await request('GET', '/api/orders/non-existing-order-id', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET non-existing order returns 404', nonExistingOrderRes.status === 404);
+
+    // 5. Historical price snapshot does not change when Product.price changes later
+    await prisma.product.update({
+      where: { id: burger.id },
+      data: { price: 120.00 },
+    });
+    const historicalOrderRes = await request('GET', `/api/orders/${createdOrderId}`, null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    const historicalBurgerItem = historicalOrderRes.body.data.items.find((i) => i.product.id === burger.id);
+    assert('Historical order keeps original burger price snapshot', historicalBurgerItem && historicalBurgerItem.price === '80.00');
+    assert('Historical order total remains unchanged after product price change', historicalOrderRes.body.data.totalAmount === '210.00');
+    await prisma.product.update({
+      where: { id: burger.id },
+      data: { price: 80.00 },
+    });
+
+    // 6. Unavailable products block order creation and keep cart unchanged
+    await request('DELETE', '/api/cart', null, { Authorization: `Bearer ${token1}` });
+    await request(
+      'POST',
+      '/api/cart/items',
+      { productId: burger.id, quantity: 1 },
+      { Authorization: `Bearer ${token1}` }
+    );
+    const cartForUnavailable = await prisma.cart.findFirst({ where: { userId: user1Id } });
+    await prisma.cartItem.create({
+      data: {
+        cartId: cartForUnavailable.id,
+        productId: unavailableProduct.id,
+        quantity: 1,
+      },
+    });
+    const orderCountBeforeUnavailable = await prisma.order.count({ where: { userId: user1Id } });
+    const unavailableOrderRes = await request('POST', '/api/orders', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('Order with unavailable product returns 400', unavailableOrderRes.status === 400);
+    assert(
+      'Unavailable product order message is clear',
+      unavailableOrderRes.body.message === 'One or more products are currently unavailable'
+    );
+    assert('Unavailable product does not create order', (await prisma.order.count({ where: { userId: user1Id } })) === orderCountBeforeUnavailable);
+    assert('Cart remains unchanged when unavailable product blocks order', (await prisma.cartItem.count({ where: { cartId: cartForUnavailable.id } })) === 2);
+    await request('DELETE', '/api/cart', null, { Authorization: `Bearer ${token1}` });
+
+    // 7. Invalid cart quantity blocks order creation and keeps cart unchanged
+    await request(
+      'POST',
+      '/api/cart/items',
+      { productId: burger.id, quantity: 1 },
+      { Authorization: `Bearer ${token1}` }
+    );
+    const cartForInvalidQuantity = await prisma.cart.findFirst({ where: { userId: user1Id } });
+    const invalidQuantityItem = await prisma.cartItem.findFirst({
+      where: {
+        cartId: cartForInvalidQuantity.id,
+        productId: burger.id,
+      },
+    });
+    await prisma.cartItem.update({
+      where: { id: invalidQuantityItem.id },
+      data: { quantity: 0 },
+    });
+    const orderCountBeforeInvalidQuantity = await prisma.order.count({ where: { userId: user1Id } });
+    const invalidQuantityOrderRes = await request('POST', '/api/orders', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('Order with invalid cart quantity returns 400', invalidQuantityOrderRes.status === 400);
+    assert('Invalid quantity order message is clear', invalidQuantityOrderRes.body.message === 'Cart contains invalid item quantity');
+    assert('Invalid quantity does not create order', (await prisma.order.count({ where: { userId: user1Id } })) === orderCountBeforeInvalidQuantity);
+    const invalidQuantityItemAfterFail = await prisma.cartItem.findUnique({
+      where: { id: invalidQuantityItem.id },
+    });
+    assert('CartItem remains when invalid quantity blocks order', invalidQuantityItemAfterFail && invalidQuantityItemAfterFail.quantity === 0);
+    await request('DELETE', '/api/cart', null, { Authorization: `Bearer ${token1}` });
+
+    // 8. Database relationship prevents CartItems for missing products
+    let missingProductCartItemRejected = false;
+    try {
+      await prisma.cartItem.create({
+        data: {
+          cartId: cartForInvalidQuantity.id,
+          productId: 'missing-product-id',
+          quantity: 1,
+        },
+      });
+    } catch (error) {
+      missingProductCartItemRejected = true;
+    }
+    assert('Database rejects CartItem with missing product', missingProductCartItemRejected === true);
+
+    // 9. User 2 can create their own independent order
+    await request(
+      'POST',
+      '/api/cart/items',
+      { productId: coffee.id, quantity: 2 },
+      { Authorization: `Bearer ${token2}` }
+    );
+    const user2OrderRes = await request('POST', '/api/orders', null, {
+      Authorization: `Bearer ${token2}`,
+    });
+    assert('User 2 can create own order', user2OrderRes.status === 201);
+    assert('User 2 order total is correct', user2OrderRes.body.data.totalAmount === '100.00');
+    assert('User 2 order has own item quantity', user2OrderRes.body.data.items[0].quantity === 2);
+
     console.log('\n========================================');
     const total = results.length;
     const passed = results.filter((r) => r.pass).length;

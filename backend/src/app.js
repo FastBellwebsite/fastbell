@@ -8,6 +8,7 @@ const addressRoutes = require('./routes/addressRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 const { notFoundHandler, errorHandler } = require('./middleware/errorMiddleware');
 
@@ -30,6 +31,7 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Error handling middleware
 app.use(notFoundHandler);
