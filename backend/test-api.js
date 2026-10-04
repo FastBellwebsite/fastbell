@@ -393,6 +393,12 @@ async function runTests() {
     assert('Empty cart totalItems is 0', emptyCartRes.body.data.totalItems === 0);
     assert('Empty cart subtotal is "0.00"', emptyCartRes.body.data.subtotal === '0.00');
 
+    const repeatEmptyCartRes = await request('GET', '/api/cart', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('Repeated GET /api/cart returns same cart id', repeatEmptyCartRes.body.data.cartId === emptyCartRes.body.data.cartId);
+    assert('Repeated GET /api/cart does not create multiple carts', (await prisma.cart.count({ where: { userId: user1Id } })) === 1);
+
     // 3. Add Item Validation: Missing productId -> 400
     const addMissingProductRes = await request(
       'POST',

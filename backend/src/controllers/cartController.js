@@ -2,15 +2,11 @@ const prisma = require('../utils/prisma');
 const { Prisma } = require('@prisma/client');
 
 const getOrCreateUserCart = async (userId) => {
-  let cart = await prisma.cart.findFirst({
+  const cart = await prisma.cart.upsert({
     where: { userId },
+    update: {},
+    create: { userId },
   });
-
-  if (!cart) {
-    cart = await prisma.cart.create({
-      data: { userId },
-    });
-  }
 
   return cart;
 };

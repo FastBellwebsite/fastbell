@@ -19,7 +19,7 @@ model User {
 
   campus    Campus?   @relation(fields: [campusId], references: [id], onDelete: SetNull)
   addresses Address[]
-  carts     Cart[]
+  cart      Cart?
   orders    Order[]
 
   @@index([campusId])
@@ -89,14 +89,12 @@ model Product {
 
 model Cart {
   id        String   @id @default(uuid())
-  userId    String
+  userId    String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items CartItem[]
-
-  @@index([userId])
 }
 
 model CartItem {
