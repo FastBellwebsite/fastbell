@@ -1129,6 +1129,234 @@ async function runTests() {
     assert('User 2 payment amount is correct', user2PaymentRes.body.data.amount === user2OrderRes.body.data.totalAmount);
     assert('User 2 payment method is WALLET', user2PaymentRes.body.data.paymentMethod === 'WALLET');
 
+    console.log('\n--- 12. Testing Delivery Module ---');
+    // 1. Delivery APIs require authentication
+    const unauthDeliveryCreateRes = await request('POST', '/api/deliveries');
+    assert('POST /api/deliveries without token returns 401', unauthDeliveryCreateRes.status === 401);
+
+    const unauthDeliveryGetRes = await request('GET', '/api/deliveries/non-existing-delivery-id');
+    assert('GET /api/deliveries/:id without token returns 401', unauthDeliveryGetRes.status === 401);
+
+    const unauthOrderDeliveryRes = await request('GET', `/api/orders/${paymentOrderId}/delivery`);
+    assert('GET /api/orders/:orderId/delivery without token returns 401', unauthOrderDeliveryRes.status === 401);
+
+    const unauthDeliveryStatusRes = await request('PUT', '/api/deliveries/non-existing-delivery-id/status', {
+      status: 'PREPARING',
+    });
+    assert('PUT /api/deliveries/:id/status without token returns 401', unauthDeliveryStatusRes.status === 401);
+
+    const invalidTokenDeliveryRes = await request('POST', '/api/deliveries', null, {
+      Authorization: 'Bearer invalid-token',
+    });
+    assert('POST /api/deliveries with invalid token returns 401', invalidTokenDeliveryRes.status === 401);
+
+    // 2. Delivery validation and payment gating
+    const missingOrderIdDeliveryRes = await request(
+      'POST',
+      '/api/deliveries',
+      {},
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery with missing orderId returns 400', missingOrderIdDeliveryRes.status === 400);
+
+    const nonExistingOrderDeliveryRes = await request(
+      'POST',
+      '/api/deliveries',
+      { orderId: 'non-existing-order-id' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery for non-existing order returns 404', nonExistingOrderDeliveryRes.status === 404);
+
+    const unpaidOrderDeliveryRes = await request(
+      'POST',
+      '/api/deliveries',
+      { orderId: createdOrderId },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery before successful payment returns 400', unpaidOrderDeliveryRes.status === 400);
+
+    const cancelledOrderDeliveryRes = await request(
+      'POST',
+      '/api/deliveries',
+      { orderId: cancelledOrder.id },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery for cancelled order returns 400', cancelledOrderDeliveryRes.status === 400);
+
+    const orderDeliveryBeforeCreateRes = await request('GET', `/api/orders/${paymentOrderId}/delivery`, null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET /api/orders/:orderId/delivery returns 404 before delivery exists', orderDeliveryBeforeCreateRes.status === 404);
+
+    // 3. Create delivery for a paid order
+    const deliveryCountBeforeCreate = await prisma.delivery.count();
+    const createDeliveryRes = await request(
+      'POST',
+      '/api/deliveries',
+      {
+        orderId: paymentOrderId,
+        status: 'DELIVERED',
+        userId: 'spoofed-user-id',
+      },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('POST /api/deliveries for paid own order returns 201', createDeliveryRes.status === 201);
+    assert('Delivery response has correct orderId', createDeliveryRes.body.data.orderId === paymentOrderId);
+    assert('Delivery initial status is PENDING', createDeliveryRes.body.data.status === 'PENDING');
+    assert('Client supplied delivery status is ignored on create', createDeliveryRes.body.data.status !== 'DELIVERED');
+    assert('Delivery count increased by one', (await prisma.delivery.count()) === deliveryCountBeforeCreate + 1);
+
+    const deliveryId = createDeliveryRes.body.data.id;
+    const dbDelivery = await prisma.delivery.findUnique({ where: { id: deliveryId } });
+    assert('Delivery is persisted in database', !!dbDelivery);
+    assert('Database delivery status is PENDING', dbDelivery && dbDelivery.status === 'PENDING');
+
+    // 4. Duplicate delivery returns existing delivery instead of creating another
+    const duplicateDeliveryRes = await request(
+      'POST',
+      '/api/deliveries',
+      { orderId: paymentOrderId },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Duplicate delivery request returns 200', duplicateDeliveryRes.status === 200);
+    assert('Duplicate delivery returns existing delivery id', duplicateDeliveryRes.body.data.id === deliveryId);
+    assert('Duplicate delivery does not create another delivery', (await prisma.delivery.count({ where: { orderId: paymentOrderId } })) === 1);
+
+    // 5. Delivery retrieval and ownership checks
+    const getOwnDeliveryRes = await request('GET', `/api/deliveries/${deliveryId}`, null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET /api/deliveries/:id returns own delivery', getOwnDeliveryRes.status === 200);
+    assert('GET /api/deliveries/:id has matching id', getOwnDeliveryRes.body.data.id === deliveryId);
+
+    const getOrderDeliveryRes = await request('GET', `/api/orders/${paymentOrderId}/delivery`, null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET /api/orders/:orderId/delivery returns own delivery', getOrderDeliveryRes.status === 200);
+    assert('GET /api/orders/:orderId/delivery has matching delivery id', getOrderDeliveryRes.body.data.id === deliveryId);
+
+    const crossUserDeliveryCreateRes = await request(
+      'POST',
+      '/api/deliveries',
+      { orderId: paymentOrderId },
+      { Authorization: `Bearer ${token2}` }
+    );
+    assert('User 2 cannot create delivery for User 1 order', crossUserDeliveryCreateRes.status === 404);
+
+    const crossUserGetDeliveryRes = await request('GET', `/api/deliveries/${deliveryId}`, null, {
+      Authorization: `Bearer ${token2}`,
+    });
+    assert('User 2 cannot read User 1 delivery by id', crossUserGetDeliveryRes.status === 404);
+
+    const crossUserOrderDeliveryRes = await request('GET', `/api/orders/${paymentOrderId}/delivery`, null, {
+      Authorization: `Bearer ${token2}`,
+    });
+    assert('User 2 cannot read User 1 delivery through order endpoint', crossUserOrderDeliveryRes.status === 404);
+
+    const missingDeliveryRes = await request('GET', '/api/deliveries/non-existing-delivery-id', null, {
+      Authorization: `Bearer ${token1}`,
+    });
+    assert('GET non-existing delivery returns 404', missingDeliveryRes.status === 404);
+
+    // 6. Delivery status validation and transition rules
+    const missingStatusRes = await request(
+      'PUT',
+      `/api/deliveries/${deliveryId}/status`,
+      {},
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery status update with missing status returns 400', missingStatusRes.status === 400);
+
+    const invalidStatusRes = await request(
+      'PUT',
+      `/api/deliveries/${deliveryId}/status`,
+      { status: 'LOST' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery status update with invalid status returns 400', invalidStatusRes.status === 400);
+
+    const invalidTransitionRes = await request(
+      'PUT',
+      `/api/deliveries/${deliveryId}/status`,
+      { status: 'DELIVERED' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery invalid transition PENDING -> DELIVERED returns 400', invalidTransitionRes.status === 400);
+
+    const preparingRes = await request(
+      'PUT',
+      `/api/deliveries/${deliveryId}/status`,
+      { status: 'PREPARING' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery transition PENDING -> PREPARING returns 200', preparingRes.status === 200);
+    assert('Delivery status is PREPARING', preparingRes.body.data.status === 'PREPARING');
+
+    const outForDeliveryRes = await request(
+      'PUT',
+      `/api/deliveries/${deliveryId}/status`,
+      { status: 'out_for_delivery' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery transition PREPARING -> OUT_FOR_DELIVERY returns 200', outForDeliveryRes.status === 200);
+    assert('Delivery status is OUT_FOR_DELIVERY', outForDeliveryRes.body.data.status === 'OUT_FOR_DELIVERY');
+
+    const deliveredRes = await request(
+      'PUT',
+      `/api/deliveries/${deliveryId}/status`,
+      { status: 'DELIVERED' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery transition OUT_FOR_DELIVERY -> DELIVERED returns 200', deliveredRes.status === 200);
+    assert('Delivery status is DELIVERED', deliveredRes.body.data.status === 'DELIVERED');
+
+    const deliveredBackwardsRes = await request(
+      'PUT',
+      `/api/deliveries/${deliveryId}/status`,
+      { status: 'PREPARING' },
+      { Authorization: `Bearer ${token1}` }
+    );
+    assert('Delivery invalid transition DELIVERED -> PREPARING returns 400', deliveredBackwardsRes.status === 400);
+
+    const crossUserStatusUpdateRes = await request(
+      'PUT',
+      `/api/deliveries/${deliveryId}/status`,
+      { status: 'CANCELLED' },
+      { Authorization: `Bearer ${token2}` }
+    );
+    assert('User 2 cannot update User 1 delivery status', crossUserStatusUpdateRes.status === 404);
+
+    const user2PaymentRecord = await prisma.payment.findUnique({
+      where: { id: user2PaymentRes.body.data.id },
+    });
+    await prisma.payment.update({
+      where: { id: user2PaymentRecord.id },
+      data: { status: 'SUCCESS' },
+    });
+    const user2DeliveryRes = await request(
+      'POST',
+      '/api/deliveries',
+      { orderId: user2OrderRes.body.data.id },
+      { Authorization: `Bearer ${token2}` }
+    );
+    assert('User 2 can create delivery for own paid order', user2DeliveryRes.status === 201);
+
+    const user2CancelDeliveryRes = await request(
+      'PUT',
+      `/api/deliveries/${user2DeliveryRes.body.data.id}/status`,
+      { status: 'CANCELLED' },
+      { Authorization: `Bearer ${token2}` }
+    );
+    assert('Delivery transition PENDING -> CANCELLED returns 200', user2CancelDeliveryRes.status === 200);
+
+    const cancelledForwardRes = await request(
+      'PUT',
+      `/api/deliveries/${user2DeliveryRes.body.data.id}/status`,
+      { status: 'OUT_FOR_DELIVERY' },
+      { Authorization: `Bearer ${token2}` }
+    );
+    assert('Delivery invalid transition CANCELLED -> OUT_FOR_DELIVERY returns 400', cancelledForwardRes.status === 400);
+
     console.log('\n========================================');
     const total = results.length;
     const passed = results.filter((r) => r.pass).length;
