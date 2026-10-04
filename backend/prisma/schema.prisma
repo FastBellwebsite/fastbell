@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  campusId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  campus    Campus?   @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  addresses Address[]
+  carts     Cart[]
+  orders    Order[]
+
+  @@index([campusId])
+}
+
+model Campus {
+  id        String   @id @default(uuid())
+  name      String
+  location  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users   User[]
+  vendors Vendor[]
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  label       String?
+  addressLine String
+  city        String
+  state       String
+  postalCode  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Vendor {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  phone       String?
+  email       String?
+  campusId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campus   Campus?   @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  products Product[]
+
+  @@index([campusId])
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  vendorId    String
+  name        String
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  imageUrl    String?  @db.VarChar(1000)
+  category    String
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendor     Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@index([vendorId])
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+model Order {
+  id          String   @id @default(uuid())
+  userId      String
+  status      String   @default("PENDING")
+  totalAmount Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int      @default(1)
+  price     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
