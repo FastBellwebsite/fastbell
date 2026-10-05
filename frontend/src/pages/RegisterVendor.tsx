@@ -131,7 +131,7 @@ export default function RegisterVendor() {
         
         {/* Meaningful Contextual Imagery Background */}
         <div className="absolute inset-0 z-0">
-          <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover opacity-80" alt="Campus Storefront" />
+          <img src="/student-campus-lifestyle.jpg" className="w-full h-full object-cover opacity-80" alt="Campus Storefront" />
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--fb-surface)] via-[var(--fb-surface)]/80 to-[var(--fb-surface)]/40" />
           <div className="absolute inset-0 bg-[var(--role-vendor-bg)] mix-blend-color opacity-50" />
         </div>

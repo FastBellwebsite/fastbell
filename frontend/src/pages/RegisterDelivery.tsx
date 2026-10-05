@@ -87,7 +87,7 @@ export default function RegisterDelivery() {
         
         {/* Meaningful Contextual Imagery Background */}
         <div className="absolute inset-0 z-0">
-          <img src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover opacity-80" alt="Campus Delivery Parcel" />
+          <img src="/student-campus-lifestyle.jpg" className="w-full h-full object-cover opacity-80" alt="Campus Delivery Parcel" />
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--fb-surface)] via-[var(--fb-surface)]/80 to-[var(--fb-surface)]/40" />
           <div className="absolute inset-0 bg-[var(--role-delivery-bg)] mix-blend-color opacity-50" />
         </div>

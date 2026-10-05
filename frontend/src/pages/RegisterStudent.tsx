@@ -117,7 +117,7 @@ export default function RegisterStudent() {
         
         {/* Meaningful Contextual Imagery Background */}
         <div className="absolute inset-0 z-0">
-          <img src="/products/classmate-notebook.webp" className="w-full h-full object-cover opacity-40" alt="Campus Essentials" />
+          <img src="/student-campus-lifestyle.jpg" className="w-full h-full object-cover opacity-40" alt="Campus Essentials" />
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--fb-surface)] via-[var(--fb-surface)]/90 to-[var(--fb-surface)]/60" />
           <div className="absolute inset-0 bg-[var(--role-student-bg)] mix-blend-color opacity-30" />
         </div>
