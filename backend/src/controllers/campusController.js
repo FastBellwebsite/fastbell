@@ -6,7 +6,16 @@ const getAllCampuses = async (req, res, next) => {
       select: {
         id: true,
         name: true,
+<<<<<<< HEAD
         location: true,
+=======
+        code: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        serviceRadiusKm: true,
+        isActive: true,
+>>>>>>> origin/main
         createdAt: true,
         updatedAt: true,
       },
@@ -33,7 +42,16 @@ const getCampusById = async (req, res, next) => {
       select: {
         id: true,
         name: true,
+<<<<<<< HEAD
         location: true,
+=======
+        code: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        serviceRadiusKm: true,
+        isActive: true,
+>>>>>>> origin/main
         createdAt: true,
         updatedAt: true,
       },
@@ -59,3 +77,8 @@ module.exports = {
   getAllCampuses,
   getCampusById,
 };
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> origin/main

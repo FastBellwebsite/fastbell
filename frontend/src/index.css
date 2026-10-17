@@ -1,0 +1,468 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* FastBell Typography System */
+    --fb-font-family: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --fb-font-display: 'Space Grotesk', sans-serif;
+
+    /* Canonical Semantic Typography Tokens */
+    --fb-text-display: clamp(2.25rem, 4.5vw, 3.25rem); /* 36–52px: Reserved for exceptional hero / portal headline */
+    --fb-text-page: clamp(1.75rem, 3vw, 2.25rem);       /* 28–36px: Major page titles */
+    --fb-text-section: clamp(1.25rem, 2vw, 1.5rem);     /* 20–24px: Section headings */
+    --fb-text-card: 1.0625rem;                           /* 17px (16–18px range): Card / product titles */
+    --fb-text-body: 0.9375rem;                           /* 15px (14–16px range): Normal body, inputs */
+    --fb-text-supporting: 0.8125rem;                     /* 13px (12–14px range): Supporting text, filter chips */
+    --fb-text-meta: 0.6875rem;                           /* 11px (11–12px range): Badges, timestamps, small tags */
+
+    /* FastBell Definitive Color Identity - Light Mode */
+    --fb-bg: #FAFAF7;
+    --fb-surface: #FFFFFF;
+    --fb-surface-elevated: #FFFFFF;
+    --fb-surface-raised: #FFFFFF;
+    
+    /* Primary Brand */
+    --fb-ink: #10131A; /* Deep Ink */
+    --fb-blue: #315BFF; /* FastBell Electric Blue */
+    --fb-blue-dark: #2447D8;
+    --fb-blue-soft: #EEF2FF;
+    --fb-blue-pale: #F5F7FF;
+    
+    /* Semantic Status */
+    --fb-success: #177245; /* Green */
+    --fb-warning: #D97706; /* Amber */
+    --fb-danger: #C93636;  /* Red */
+    --fb-error: #C93636;
+
+    /* Text & Borders */
+    --fb-text: #10131A;
+    --fb-text-secondary: #4A4D57;
+    --fb-text-muted: #667085;
+    --fb-border: #E4E8EF;
+    --fb-line: #E4E8EF;
+
+    /* Semantic Mappings */
+    --fb-accent: var(--fb-blue);
+    --fb-accent-soft: var(--fb-blue-soft);
+    
+    /* Variables from original config */
+    --fb-primary: var(--fb-blue);
+    --fb-primary-soft: var(--fb-blue-soft);
+    --fb-brand: var(--fb-blue);
+    --fb-brand-hover: var(--fb-blue-dark);
+
+    /* Role Card Portal Colors (Distinct identities for all modes) */
+    /* Student: Blue */
+    --role-student-color: var(--fb-blue);
+    --role-student-bg: var(--fb-blue-soft);
+    --role-student-surface: var(--fb-surface);
+
+    /* Vendor: Amber/Orange */
+    --role-vendor-color: #D97706;
+    --role-vendor-bg: #FEF3C7;
+    --role-vendor-surface: #FFFBEB;
+
+    /* Delivery: Green */
+    --role-delivery-color: #059669;
+    --role-delivery-bg: #D1FAE5;
+    --role-delivery-surface: #ECFDF5;
+
+    /* Admin: Indigo/Violet */
+    --role-admin-color: #6D28D9;
+    --role-admin-bg: #EDE9FE;
+    --role-admin-surface: #F5F3FF;
+  }
+
+  :root.dark, html.dark, .dark {
+    /* FastBell Definitive Color Identity - Dark Mode */
+    --fb-bg: #090B10; /* Deep Ink background */
+    --fb-surface: #10131A; /* Slightly lighter surface */
+    --fb-surface-elevated: #161A24; /* Elevated layers */
+    --fb-surface-raised: #1A1F2B;
+    
+    /* Primary Brand */
+    --fb-ink: #F7F9FC; /* Inverted for contrast */
+    --fb-blue: #4A6FFF; /* Slightly brightened FastBell Electric Blue for dark mode contrast */
+    --fb-blue-dark: #6383FF;
+    --fb-blue-soft: #1E294A; /* Muted blue for backgrounds */
+    --fb-blue-pale: #161C33;
+    
+    /* Semantic Status */
+    --fb-success: #20A061; /* Adjusted for dark mode contrast */
+    --fb-warning: #F59E0B; /* Adjusted */
+    --fb-danger: #EF4444;  /* Adjusted */
+    --fb-error: #EF4444;
+
+    /* Text & Borders */
+    --fb-text: #F7F9FC;
+    --fb-text-secondary: #CBD5E1;
+    --fb-text-muted: #9BA3AF;
+    --fb-border: #2A303F;
+    --fb-line: #2A303F;
+
+    --fb-accent: var(--fb-blue);
+    --fb-accent-soft: var(--fb-blue-soft);
+
+    /* Role Card Portal Colors (Dark mode: distinct identities) */
+    --role-student-color: #4A6FFF; /* Blue */
+    --role-student-bg: #1E294A;
+    --role-student-surface: #10141D;
+
+    --role-vendor-color: #F59E0B; /* Amber */
+    --role-vendor-bg: #38240B;
+    --role-vendor-surface: #17120C;
+
+    --role-delivery-color: #20A061; /* Green */
+    --role-delivery-bg: #0C2B1B;
+    --role-delivery-surface: #0E1511;
+
+    --role-admin-color: #8B5CF6; /* Indigo */
+    --role-admin-bg: #291C4A;
+    --role-admin-surface: #14111A;
+  }
+
+  html {
+    background-color: var(--fb-bg);
+    color: var(--fb-text);
+  }
+
+  body, input, textarea, select, button {
+    font-family: var(--fb-font-family);
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: var(--fb-font-display);
+    letter-spacing: -0.025em;
+  }
+
+  h1 {
+    letter-spacing: -0.035em;
+  }
+
+  body {
+    background-color: var(--fb-bg);
+    color: var(--fb-text);
+    letter-spacing: -0.012em;
+    @apply antialiased selection:bg-fb-primary selection:text-white transition-colors duration-200;
+  }
+
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* =========================================================================
+     FastBell Canonical Button System
+     Single unified system: Primary, Outline, Soft, Destructive, and Quiet
+     Deliberate default -> hover -> focus-visible -> active -> disabled states
+     ========================================================================= */
+  .btn-primary,
+  .btn-action-primary {
+    @apply inline-flex items-center justify-center gap-2 px-[1.1rem] py-[0.75rem] min-h-[42px] bg-[var(--fb-blue)] text-white border border-[var(--fb-blue)] outline-none transition-all duration-200 ease-out select-none cursor-pointer whitespace-nowrap rounded-sm font-bold text-xs uppercase tracking-wider shrink-0;
+  }
+  .btn-primary:hover:not(:disabled),
+  .btn-action-primary:hover:not(:disabled) {
+    @apply bg-[var(--fb-blue-dark)] border-[var(--fb-blue-dark)] text-white;
+    box-shadow: 0 4px 12px rgba(49, 91, 255, 0.2);
+  }
+  .btn-primary:focus-visible,
+  .btn-action-primary:focus-visible {
+    @apply ring-2 ring-[var(--fb-blue)] ring-offset-2 ring-offset-[var(--fb-bg)] outline-none;
+  }
+  .btn-primary:active:not(:disabled),
+  .btn-action-primary:active:not(:disabled) {
+    @apply scale-[0.98];
+  }
+  .btn-primary:disabled,
+  .btn-action-primary:disabled {
+    @apply opacity-50 cursor-not-allowed bg-[var(--fb-text-muted)] border-[var(--fb-text-muted)] text-[var(--fb-bg)] shadow-none transform-none;
+  }
+
+  .btn-outline,
+  .btn-action-outline,
+  .btn-quiet {
+    @apply inline-flex items-center justify-center gap-2 px-[1.1rem] py-[0.75rem] min-h-[42px] bg-[var(--fb-surface)] text-[var(--fb-ink)] border border-[var(--fb-border)] outline-none transition-all duration-200 ease-out select-none cursor-pointer whitespace-nowrap rounded-sm font-bold text-xs uppercase tracking-wider shrink-0;
+  }
+  .btn-outline:hover:not(:disabled),
+  .btn-action-outline:hover:not(:disabled),
+  .btn-quiet:hover:not(:disabled) {
+    @apply border-[var(--fb-blue)] text-[var(--fb-blue)] bg-[var(--fb-blue-pale)];
+  }
+  .btn-outline:focus-visible,
+  .btn-action-outline:focus-visible,
+  .btn-quiet:focus-visible {
+    @apply ring-2 ring-[var(--fb-blue)] ring-offset-2 ring-offset-[var(--fb-bg)] outline-none;
+  }
+  .btn-outline:active:not(:disabled),
+  .btn-action-outline:active:not(:disabled),
+  .btn-quiet:active:not(:disabled) {
+    @apply scale-[0.98];
+  }
+  .btn-outline:disabled,
+  .btn-action-outline:disabled,
+  .btn-quiet:disabled {
+    @apply opacity-50 cursor-not-allowed border-[var(--fb-text-muted)] text-[var(--fb-text-muted)] bg-[var(--fb-bg)];
+  }
+
+  .btn-action-soft,
+  .btn-soft {
+    @apply inline-flex items-center justify-center gap-2 px-[1.1rem] py-[0.75rem] min-h-[42px] bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] border border-transparent outline-none transition-all duration-200 ease-out select-none cursor-pointer whitespace-nowrap rounded-sm font-bold text-xs uppercase tracking-wider shrink-0;
+  }
+  .btn-action-soft:hover:not(:disabled),
+  .btn-soft:hover:not(:disabled) {
+    @apply bg-[var(--fb-blue)] text-white border-[var(--fb-blue)];
+  }
+  .btn-action-soft:focus-visible,
+  .btn-soft:focus-visible {
+    @apply ring-2 ring-[var(--fb-blue)] ring-offset-2 ring-offset-[var(--fb-bg)] outline-none;
+  }
+  .btn-action-soft:active:not(:disabled),
+  .btn-soft:active:not(:disabled) {
+    @apply scale-[0.98];
+  }
+  .btn-action-soft:disabled,
+  .btn-soft:disabled {
+    @apply opacity-50 cursor-not-allowed text-[var(--fb-text-muted)] bg-[var(--fb-bg)];
+  }
+
+  .btn-action-destructive,
+  .btn-destructive {
+    @apply inline-flex items-center justify-center gap-2 px-[1.1rem] py-[0.75rem] min-h-[42px] bg-transparent text-[var(--fb-error)] border border-[var(--fb-error)] outline-none transition-all duration-200 ease-out select-none cursor-pointer whitespace-nowrap rounded-sm font-bold text-xs uppercase tracking-wider shrink-0;
+  }
+  .btn-action-destructive:hover:not(:disabled),
+  .btn-destructive:hover:not(:disabled) {
+    @apply bg-[var(--fb-error)] text-white;
+  }
+  .btn-action-destructive:focus-visible,
+  .btn-destructive:focus-visible {
+    @apply ring-2 ring-[var(--fb-error)] ring-offset-2 ring-offset-[var(--fb-bg)];
+  }
+  .btn-action-destructive:active:not(:disabled),
+  .btn-destructive:active:not(:disabled) {
+    @apply scale-[0.98];
+  }
+  .btn-action-destructive:disabled,
+  .btn-destructive:disabled {
+    @apply opacity-50 cursor-not-allowed border-[var(--fb-text-muted)] text-[var(--fb-text-muted)];
+  }
+
+  /* FastBell Unified Discovery Controls */
+  .fb-search-bar {
+    @apply relative flex items-center bg-[var(--fb-surface)] border border-[var(--fb-border)] rounded-xl h-11 px-3.5 shadow-sm transition-all w-full max-w-xl;
+  }
+  .fb-search-bar:focus-within {
+    border-color: var(--fb-blue);
+    box-shadow: 0 0 0 2px rgba(49, 91, 255, 0.15);
+  }
+  .fb-search-input {
+    @apply w-full bg-transparent border-none text-[15px] font-medium outline-none px-2.5 py-1 text-[var(--fb-ink)] placeholder:text-[var(--fb-text-muted)];
+  }
+
+  .fb-filter-chip {
+    @apply inline-flex items-center px-3 py-1.5 rounded-lg text-[13px] sm:text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer border border-[var(--fb-border)] bg-[var(--fb-surface)] text-[var(--fb-text-secondary)] hover:border-[var(--fb-blue)] hover:text-[var(--fb-ink)] shrink-0 select-none;
+  }
+  .fb-filter-chip-active {
+    @apply border-[var(--fb-blue)] bg-[var(--fb-blue)] text-white font-bold shadow-sm;
+  }
+
+  /* FastBell Global Semantic Typography System */
+  .fb-display {
+    font-family: var(--fb-font-display);
+    font-size: var(--fb-text-display);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .fb-page-title {
+    font-family: var(--fb-font-display);
+    font-size: var(--fb-text-page);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+  }
+
+  .fb-section-title {
+    font-family: var(--fb-font-display);
+    font-size: var(--fb-text-section);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  .fb-card-title {
+    font-family: var(--fb-font-display);
+    font-size: var(--fb-text-card);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+  }
+
+  .fb-body {
+    font-family: var(--fb-font-family);
+    font-size: var(--fb-text-body);
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: -0.012em;
+  }
+
+  .fb-body-small {
+    font-family: var(--fb-font-family);
+    font-size: var(--fb-text-supporting);
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+
+  .fb-caption {
+    font-family: var(--fb-font-family);
+    font-size: var(--fb-text-supporting);
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+  }
+
+  .fb-label,
+  .fb-meta {
+    font-family: var(--fb-font-family);
+    font-size: var(--fb-text-meta);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+  }
+
+  .fb-button {
+    font-family: var(--fb-font-family);
+    font-size: var(--fb-text-meta);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+  }
+
+  .fb-price {
+    font-family: var(--fb-font-display);
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .fb-price-lg {
+    font-family: var(--fb-font-display);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.025em;
+  }
+
+  .page-shell {
+    @apply max-w-[1440px] mx-auto px-6 lg:px-12 relative z-10;
+  }
+
+
+
+  .input-field {
+    @apply w-full rounded-xl border-2 px-4 py-3 text-sm sm:text-base outline-none transition-all duration-200;
+    background-color: var(--fb-surface);
+    border-color: var(--fb-border);
+    color: var(--fb-text);
+  }
+
+  .input-field::placeholder {
+    color: var(--fb-text-muted);
+    transition: transform 200ms ease-out, opacity 200ms ease-out;
+  }
+
+  .input-field:focus {
+    border-color: var(--fb-blue);
+    box-shadow: 0 0 0 4px var(--fb-blue-soft);
+  }
+
+  .input-field:focus::placeholder {
+    transform: translateX(4px);
+    opacity: 0.7;
+  }
+
+  /* Custom horizontal rail hiding scrollbars */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Stepper button */
+  .stepper-btn {
+    @apply h-8 w-8 rounded-lg flex items-center justify-center font-bold transition-colors select-none cursor-pointer;
+    color: var(--fb-text);
+    background-color: var(--fb-bg);
+  }
+  
+  .stepper-btn:hover {
+    background-color: var(--fb-blue-soft);
+    color: var(--fb-blue);
+  }
+
+  /* FastBell Motion System */
+  .fade-in {
+    animation: fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .slide-up {
+    animation: slideUp 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  .scale-in {
+    animation: scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(16px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+
+  @keyframes scaleIn {
+    from { 
+      opacity: 0; 
+      transform: scale(0.96); 
+    }
+    to { 
+      opacity: 1; 
+      transform: scale(1); 
+    }
+  }
+}
+
+@layer utilities {
+  .interactive-card {
+    @apply transition-all duration-200 ease-out border border-fb-border bg-fb-surface hover:border-fb-brand hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)];
+  }
+  
+  .interactive-row {
+    @apply transition-colors duration-150 ease-out hover:bg-fb-bg;
+  }
+  
+  .glass-panel {
+    @apply bg-fb-surface/90 backdrop-blur-md border border-fb-border;
+  }
+}
