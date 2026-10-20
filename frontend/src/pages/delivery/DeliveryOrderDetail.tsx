@@ -1,19 +1,43 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
 import { StatusBadge, EmptyState } from '@/components/UI';
-import { MapPin, Store, User, Phone, Navigation, CheckCircle, Clock, PackageCheck, Box } from 'lucide-react';
-import { mockUserService } from '@/services/mockUserService';
+import { MapPin, Store, User, Phone, Navigation, CheckCircle, Clock, PackageCheck, Box, ArrowLeft } from 'lucide-react';
 
 export default function DeliveryOrderDetail() {
   const { user } = useAuth();
   const { orderId } = useParams();
   const { stores } = useStore();
-  const { orders, markPickedUp, markOutForDelivery, markDelivered } = useOrder();
+  const { orders, markPickedUp, markOutForDelivery, markDelivered, getOrderById, isLoading } = useOrder();
+  const [fetchedOrder, setFetchedOrder] = useState<any>(null);
+  const [isFetchingLocal, setIsFetchingLocal] = useState(false);
 
   const partnerId = user?.id;
-  const order = orders.find(o => o.id === orderId);
+  useEffect(() => {
+    if (!orderId) return;
+    const exists = orders.find(o => o.id === orderId || o.orderNumber === orderId);
+    if (!exists) {
+      setIsFetchingLocal(true);
+      getOrderById(orderId)
+        .then(res => {
+          if (res) setFetchedOrder(res);
+        })
+        .finally(() => setIsFetchingLocal(false));
+    }
+  }, [orderId, orders, getOrderById]);
+
+  const order = orders.find(o => o.id === orderId || o.orderNumber === orderId) || fetchedOrder;
+
+  if (!order && (isLoading || isFetchingLocal)) {
+    return (
+      <div className="py-12 text-center">
+        <div className="animate-spin h-8 w-8 border-2 border-[var(--fb-brand)] border-t-transparent rounded-full mx-auto mb-4" />
+        <p className="text-sm text-[var(--fb-text-muted)] font-medium">Loading delivery details...</p>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -32,9 +56,22 @@ export default function DeliveryOrderDetail() {
     );
   }
 
-  const customer = mockUserService.getUserById(order.studentId);
-  const customerName = customer ? customer.name : 'Campus Student';
-  const customerPhone = customer ? customer.phone : '9876543210';
+  // Real customer details from backend order
+  const customerName = order.customer?.name || order.student?.name || 'Campus Student';
+  const rawPhone = order.customer?.phone || order.student?.phone;
+  const customerPhone = rawPhone && rawPhone.trim() ? rawPhone.trim() : 'No phone provided';
+
+  // Format real address lines with fallbacks
+  const addressParts = [
+    order.address.line,
+    order.address.locality,
+    order.address.hostelName ? `Hostel: ${order.address.hostelName}` : null,
+    order.address.roomNumber ? `Room: ${order.address.roomNumber}` : null,
+    order.address.landmark ? `Near ${order.address.landmark}` : null,
+    order.address.city
+  ].filter(Boolean);
+
+  const dropLocation = addressParts.length > 0 ? addressParts.join(', ') : (order.address.line || 'Campus Delivery Address');
 
   const store = stores.find(s => s.id === order.storeId);
   const storeName = store?.name || 'Campus Vendor';
@@ -45,7 +82,7 @@ export default function DeliveryOrderDetail() {
         to="/delivery"
         className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--fb-ink)]/60 hover:text-[var(--fb-blue)]"
       >
-        ← Back to delivery dashboard
+        <ArrowLeft className="h-4 w-4" /> Back to delivery dashboard
       </Link>
       <div className="card p-6">
         <div className="flex items-center justify-between">
@@ -60,19 +97,19 @@ export default function DeliveryOrderDetail() {
           <Info
             icon={<MapPin className="h-4 w-4" />}
             label="Drop at"
-            value={`${order.address.line}, ${order.address.landmark}`}
+            value={dropLocation}
           />
           <Info icon={<User className="h-4 w-4" />} label="Customer" value={customerName} />
           <Info icon={<Phone className="h-4 w-4" />} label="Contact" value={customerPhone} />
         </div>
 
-        <div className="mt-5 border-t border-[#ebe3da] pt-4">
+        <div className="mt-5 border-t border-[var(--fb-border)] pt-4">
           <h4 className="text-sm font-bold text-[var(--fb-ink)] mb-3">Items</h4>
           <div className="space-y-2">
-            {order.items.map(item => (
+            {order.items.map((item: any) => (
               <div
                 key={item.productId}
-                className="flex items-center gap-3 p-2.5 rounded-xl bg-background-50 border border-background-100"
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--fb-bg)] border border-[var(--fb-border)]"
               >
                 <Box className="h-4 w-4 text-[var(--fb-ink)] shrink-0" />
                 <span className="flex-1 text-sm font-semibold text-[var(--fb-ink)]">
@@ -84,7 +121,7 @@ export default function DeliveryOrderDetail() {
               </div>
             ))}
           </div>
-          <div className="mt-3 flex justify-between border-t border-[#ebe3da] pt-2">
+          <div className="mt-3 flex justify-between border-t border-[var(--fb-border)] pt-2">
             <span className="font-bold text-[var(--fb-ink)]">Total Order Amount</span>
             <span className="font-display text-lg font-bold text-[var(--fb-ink)]">
               ₹{order.total}
@@ -115,20 +152,20 @@ export default function DeliveryOrderDetail() {
           {order.status === 'OUT_FOR_DELIVERY' && (
             <button
               onClick={() => markDelivered(order.id)}
-              className="btn-primary w-full flex items-center justify-center gap-2 bg-[#E8F5E9] hover:bg-[#E8F5E9]"
+              className="w-full py-3.5 rounded-xl font-bold text-xs bg-[var(--fb-success)] text-white hover:brightness-110 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <CheckCircle className="h-4 w-4" /> Mark Order as Delivered
             </button>
           )}
 
           {order.status === 'DELIVERED' && (
-            <div className="p-4 text-center rounded-2xl bg-[#E8F5E9] text-[var(--fb-success)] font-bold text-sm border border-[var(--fb-success)]">
+            <div className="p-4 text-center rounded-2xl bg-[#E8F5E9] dark:bg-emerald-950/40 text-[var(--fb-success)] dark:text-emerald-400 font-bold text-sm border border-[var(--fb-success)]/30">
               Order successfully delivered. Great job!
             </div>
           )}
 
           {order.status === 'CANCELLED' && (
-            <div className="p-4 text-center rounded-2xl bg-[#FFEBEE] text-[var(--fb-danger)] font-bold text-sm border border-[var(--fb-danger)]">
+            <div className="p-4 text-center rounded-2xl bg-[#FFEBEE] dark:bg-rose-950/40 text-[var(--fb-danger)] dark:text-rose-400 font-bold text-sm border border-[var(--fb-danger)]/30">
               Order was cancelled.
             </div>
           )}
@@ -141,7 +178,7 @@ export default function DeliveryOrderDetail() {
 function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="grid h-9 w-9 place-items-center rounded-lg bg-background-50 text-[var(--fb-blue)] shrink-0">
+      <span className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] shrink-0">
         {icon}
       </span>
       <div>

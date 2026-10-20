@@ -1,27 +1,58 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, Power, Search, Box, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { useAuth } from '@/context/AuthContext';
 import { FastBellSelect } from '@/components/FastBellSelect';
+import { isProductInStock, isProductOutOfStock, isProductLowStock, isProductVendorDisabled } from '@/selectors/productSelectors';
 
 export default function VendorProducts() {
   const { user } = useAuth();
-  const { products, stores, toggleProductAvailability, deleteProduct } = useStore();
+  const { products, stores, toggleProductAvailability, deleteProduct, refreshData } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock' | 'disabled'>('all');
+
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   // Find all stores belonging to this vendor
+  const userStoreId = (user as any)?.storeId;
+  const userVendorProfileId = (user as any)?.vendorProfileId;
+  const userStoreIds: string[] = (user as any)?.storeIds || [];
+
   const vendorStores = stores.filter(
-    s => s.vendorId === user?.id || s.id === (user as any)?.storeId
+    s =>
+      s.vendorId === user?.id ||
+      (userVendorProfileId && s.vendorId === userVendorProfileId) ||
+      (userStoreId && s.id === userStoreId) ||
+      userStoreIds.includes(s.id)
   );
   const vendorStoreIds = vendorStores.map(s => s.id);
   const [selectedStore, setSelectedStore] = useState<string>('all');
 
-  const list = products.filter(p => {
-    const belongsToVendor = vendorStoreIds.includes(p.storeId) || p.storeId === (user as any)?.storeId;
+  const vendorItems = products.filter(p => {
+    const belongsToVendor =
+      vendorStoreIds.includes(p.storeId) ||
+      p.storeId === userStoreId ||
+      userStoreIds.includes(p.storeId);
     if (!belongsToVendor) return false;
     if (selectedStore !== 'all' && p.storeId !== selectedStore) return false;
-    return p.name.toLowerCase().includes(searchTerm.toLowerCase().trim());
+    return true;
+  });
+
+  const inStockCount = vendorItems.filter(isProductInStock).length;
+  const outOfStockCount = vendorItems.filter(isProductOutOfStock).length;
+  const lowStockCount = vendorItems.filter(isProductLowStock).length;
+  const disabledCount = vendorItems.filter(isProductVendorDisabled).length;
+
+  const list = vendorItems.filter(p => {
+    if (stockFilter === 'in_stock' && !isProductInStock(p)) return false;
+    if (stockFilter === 'out_of_stock' && !isProductOutOfStock(p)) return false;
+    if (stockFilter === 'low_stock' && !isProductLowStock(p)) return false;
+    if (stockFilter === 'disabled' && !isProductVendorDisabled(p)) return false;
+    if (searchTerm.trim() && !p.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) return false;
+    return true;
   });
 
   const handleDelete = (id: string, name: string) => {
@@ -83,6 +114,89 @@ export default function VendorProducts() {
         </div>
       </div>
 
+      {/* Inventory Summary Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <button
+          onClick={() => setStockFilter('all')}
+          className={`flex flex-col p-3 rounded-xl border text-left transition-all cursor-pointer ${
+            stockFilter === 'all'
+              ? 'border-[var(--fb-brand)] bg-[var(--fb-brand)]/5 ring-1 ring-[var(--fb-brand)]/20'
+              : 'border-[var(--fb-border)] bg-[var(--fb-surface)] hover:bg-[var(--fb-background)]/50'
+          }`}
+        >
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--fb-text-muted)]">
+            Total Catalog
+          </span>
+          <span className="font-display text-xl font-black text-[var(--fb-text-primary)] mt-0.5">
+            {vendorItems.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setStockFilter('in_stock')}
+          className={`flex flex-col p-3 rounded-xl border text-left transition-all cursor-pointer ${
+            stockFilter === 'in_stock'
+              ? 'border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500/20'
+              : 'border-[var(--fb-border)] bg-[var(--fb-surface)] hover:bg-[var(--fb-background)]/50'
+          }`}
+        >
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+            In Stock
+          </span>
+          <span className="font-display text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+            {inStockCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setStockFilter('low_stock')}
+          className={`flex flex-col p-3 rounded-xl border text-left transition-all cursor-pointer ${
+            stockFilter === 'low_stock'
+              ? 'border-amber-500 bg-amber-500/5 ring-1 ring-amber-500/20'
+              : 'border-[var(--fb-border)] bg-[var(--fb-surface)] hover:bg-[var(--fb-background)]/50'
+          }`}
+        >
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            Low Stock
+          </span>
+          <span className="font-display text-xl font-black text-amber-600 dark:text-amber-400 mt-0.5">
+            {lowStockCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setStockFilter('out_of_stock')}
+          className={`flex flex-col p-3 rounded-xl border text-left transition-all cursor-pointer ${
+            stockFilter === 'out_of_stock'
+              ? 'border-rose-500 bg-rose-500/5 ring-1 ring-rose-500/20'
+              : 'border-[var(--fb-border)] bg-[var(--fb-surface)] hover:bg-[var(--fb-background)]/50'
+          }`}
+        >
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+            Out of Stock
+          </span>
+          <span className="font-display text-xl font-black text-rose-600 dark:text-rose-400 mt-0.5">
+            {outOfStockCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setStockFilter('disabled')}
+          className={`flex flex-col p-3 rounded-xl border text-left transition-all col-span-2 sm:col-span-1 cursor-pointer ${
+            stockFilter === 'disabled'
+              ? 'border-zinc-500 bg-zinc-500/5 ring-1 ring-zinc-500/20'
+              : 'border-[var(--fb-border)] bg-[var(--fb-surface)] hover:bg-[var(--fb-background)]/50'
+          }`}
+        >
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Disabled (Vendor)
+          </span>
+          <span className="font-display text-xl font-black text-zinc-500 dark:text-zinc-400 mt-0.5">
+            {disabledCount}
+          </span>
+        </button>
+      </div>
+
       {/* Catalog Table */}
       <div className="bg-[var(--fb-surface)] border border-[var(--fb-border)] rounded-2xl overflow-hidden shadow-soft">
         <div className="overflow-x-auto">
@@ -91,7 +205,7 @@ export default function VendorProducts() {
               <tr>
                 <th className="px-6 py-3.5">Product & Details</th>
                 <th className="px-6 py-3.5">Campus Price</th>
-                <th className="px-6 py-3.5">Live Stock Status</th>
+                <th className="px-6 py-3.5">Inventory & Stock Status</th>
                 <th className="px-6 py-3.5 text-right">Quick Actions</th>
               </tr>
             </thead>
@@ -119,27 +233,37 @@ export default function VendorProducts() {
                   </td>
 
                   <td className="px-6 py-4">
-                    <button
-                      onClick={() => toggleProductAvailability(p.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider border transition-all cursor-pointer ${
-                        p.isAvailable
-                          ? 'bg-[#E8F5E9] text-[var(--fb-success)] border-[var(--fb-success)] hover:bg-[#E8F5E9]'
-                          : 'bg-[#FFEBEE] text-[var(--fb-danger)] border-[var(--fb-danger)] hover:bg-[#FFEBEE]'
-                      }`}
-                      title="Click to toggle availability"
-                    >
-                      {p.isAvailable ? (
-                        <>
-                          <CheckCircle2 size={12} className="text-[var(--fb-success)]" />
-                          <span>In Stock (ON)</span>
-                        </>
+                    <div className="flex flex-col gap-1.5 items-start">
+                      {p.trackInventory === false ? (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50">
+                          Service (Capacity)
+                        </span>
+                      ) : p.stockQuantity === 0 ? (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50">
+                          Out of Stock (0 units)
+                        </span>
+                      ) : (p.stockQuantity ?? 0) <= (p.lowStockThreshold ?? 5) ? (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50">
+                          Low Stock ({p.stockQuantity} left)
+                        </span>
                       ) : (
-                        <>
-                          <XCircle size={12} className="text-[var(--fb-danger)]" />
-                          <span>Sold Out (OFF)</span>
-                        </>
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
+                          In Stock ({p.stockQuantity} units)
+                        </span>
                       )}
-                    </button>
+
+                      <button
+                        onClick={() => toggleProductAvailability(p.id)}
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border cursor-pointer transition-all ${
+                          p.isAvailable
+                            ? 'text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800'
+                            : 'text-zinc-500 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800'
+                        }`}
+                        title="Click to toggle vendor manual enablement"
+                      >
+                        {p.isAvailable ? '● Active' : '○ Disabled'}
+                      </button>
+                    </div>
                   </td>
 
                   <td className="px-6 py-4">
@@ -149,7 +273,7 @@ export default function VendorProducts() {
                         className={`h-8 w-8 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
                           p.isAvailable
                             ? 'border-[var(--fb-border)] text-[var(--fb-text-muted)] hover:bg-black/5 hover:text-[var(--fb-text-primary)]'
-                            : 'border-[var(--fb-success)] bg-[#E8F5E9] text-[var(--fb-success)] hover:bg-[#E8F5E9]'
+                            : 'border-[var(--fb-success)] bg-[#E8F5E9] dark:bg-emerald-950/40 text-[var(--fb-success)] dark:text-emerald-400 hover:brightness-105'
                         }`}
                         title="Toggle stock availability"
                       >
@@ -166,7 +290,7 @@ export default function VendorProducts() {
 
                       <button
                         onClick={() => handleDelete(p.id, p.name)}
-                        className="h-8 w-8 rounded-xl border border-[var(--fb-border)] text-[var(--fb-text-muted)] hover:bg-[#FFEBEE] hover:text-[var(--fb-danger)] hover:border-[var(--fb-danger)] flex items-center justify-center transition-colors cursor-pointer"
+                        className="h-8 w-8 rounded-xl border border-[var(--fb-border)] text-[var(--fb-text-muted)] hover:bg-[#FFEBEE] dark:hover:bg-rose-950/40 hover:text-[var(--fb-danger)] hover:border-[var(--fb-danger)] flex items-center justify-center transition-colors cursor-pointer"
                         title="Delete Item"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

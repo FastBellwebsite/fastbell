@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FastBellSelect } from '@/components/FastBellSelect';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { getCurrentLocation } from '@/utils/location';
 
 const schema = z.object({
   name: z.string().min(2, 'Enter your full name.'),
@@ -50,6 +51,8 @@ export default function RegisterDelivery() {
 
   const onSubmit = async (data: FormValues) => {
     try {
+      const currentLocation = await getCurrentLocation();
+
       const newUser: DeliveryProfile = {
         id: `DEL-${Date.now()}`,
         name: data.name.trim(),
@@ -62,8 +65,8 @@ export default function RegisterDelivery() {
         vehicleType: data.vehicleType,
         vehicleNumber: data.vehicleNumber?.trim(),
         location: {
-          latitude: 11.1271,
-          longitude: 76.9966,
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
           address: data.address?.trim() || 'SNS Campus Main Gate',
           locality: data.serviceArea?.trim() || 'SNS Campus',
           city: 'Coimbatore',
@@ -76,10 +79,9 @@ export default function RegisterDelivery() {
       toast.success(`Welcome to the Fleet, ${newUser.name}!`);
       navigate('/delivery');
     } catch (err: any) {
-      toast.error(err?.message || 'Registration failed. Please try again.');
+      toast.error(err?.message || 'Unable to get your current location. Please allow location access and try again.');
     }
   };
-
   return (
     <div className="min-h-screen bg-[var(--fb-bg)] flex flex-col md:flex-row selection:bg-[var(--fb-blue)] selection:text-white fade-in">
       {/* LEFT SIDE - Brand World */}

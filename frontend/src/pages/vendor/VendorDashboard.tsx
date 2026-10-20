@@ -1,25 +1,49 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Plus, ArrowRight, TrendingUp } from 'lucide-react';
+import { Package, Clock, Plus, ArrowRight, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/context/AuthContext';
 import { getOrdersForVendor } from '@/selectors/orderSelectors';
+import { isProductInStock, isProductOutOfStock, isProductLowStock, isProductVendorDisabled } from '@/selectors/productSelectors';
 import { StatusBadge } from '@/components/UI';
 
 export default function VendorDashboard() {
   const { user } = useAuth();
-  const { products, stores } = useStore();
+  const { products, stores, refreshData } = useStore();
+
+  useEffect(() => {
+    refreshData();
+  }, []);
   const { orders } = useOrder();
 
   const userStoreId = (user as any)?.storeId;
+  const userVendorProfileId = (user as any)?.vendorProfileId;
+  const userStoreIds: string[] = (user as any)?.storeIds || [];
+
   const vendorStores = stores.filter(
-    s => s.vendorId === user?.id || (userStoreId && s.id === userStoreId)
+    s =>
+      s.vendorId === user?.id ||
+      (userVendorProfileId && s.vendorId === userVendorProfileId) ||
+      (userStoreId && s.id === userStoreId) ||
+      userStoreIds.includes(s.id)
   );
   const vendorStoreIds = vendorStores.map(s => s.id);
-  const effectiveStoreIds = vendorStoreIds.length > 0 ? vendorStoreIds : (userStoreId ? [userStoreId] : []);
+  const effectiveStoreIds = Array.from(
+    new Set([
+      ...vendorStoreIds,
+      ...(userStoreId ? [userStoreId] : []),
+      ...userStoreIds
+    ])
+  );
 
-  const vendorOrders = getOrdersForVendor(orders, effectiveStoreIds);
-  const vendorProducts = products.filter(p => effectiveStoreIds.includes(p.storeId));
+  const vendorOrders = effectiveStoreIds.length > 0 ? getOrdersForVendor(orders, effectiveStoreIds) : orders;
+  const vendorProducts = effectiveStoreIds.length > 0 ? products.filter(p => effectiveStoreIds.includes(p.storeId)) : products;
+
+  const inStockProducts = vendorProducts.filter(isProductInStock);
+  const outOfStockProducts = vendorProducts.filter(isProductOutOfStock);
+  const lowStockProducts = vendorProducts.filter(isProductLowStock);
+  const disabledProducts = vendorProducts.filter(isProductVendorDisabled);
 
   const today = vendorOrders.length;
   const pending = vendorOrders.filter(o =>
@@ -44,6 +68,10 @@ export default function VendorDashboard() {
             <span className="text-[var(--fb-border)]">|</span>
             <span className="flex items-center gap-1 text-[var(--fb-warning)]">
               <Package className="h-3 w-3" /> {pending} ACTION NEEDED
+            </span>
+            <span className="text-[var(--fb-border)]">|</span>
+            <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="h-3 w-3" /> {outOfStockProducts.length} OUT OF STOCK
             </span>
           </div>
         </div>
@@ -84,7 +112,7 @@ export default function VendorDashboard() {
 
           <div className="w-full overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-[#fcfcfc] dark:bg-black/20 border-b border-[var(--fb-border)]">
+              <thead className="bg-[var(--fb-bg)] border-b border-[var(--fb-border)]">
                 <tr>
                   <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)]">Order</th>
                   <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)]">Time</th>
@@ -150,7 +178,7 @@ export default function VendorDashboard() {
           </div>
 
           <div className="flex-1 flex flex-col">
-            <div className="flex px-4 py-2.5 border-b border-[var(--fb-border)] bg-[#fcfcfc] dark:bg-black/20">
+            <div className="flex px-4 py-2.5 border-b border-[var(--fb-border)] bg-[var(--fb-bg)]">
               <span className="flex-1 text-[11px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)]">
                 Item
               </span>

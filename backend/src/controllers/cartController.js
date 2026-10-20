@@ -3,9 +3,9 @@ const { Prisma } = require('@prisma/client');
 
 const getOrCreateUserCart = async (userId) => {
   const cart = await prisma.cart.upsert({
-    where: { userId },
+    where: { studentId: userId },
     update: {},
-    create: { userId },
+    create: { studentId: userId },
   });
 
   return cart;
@@ -34,7 +34,8 @@ const getFormattedCart = async (cartId) => {
   let totalItems = 0;
 
   const formattedItems = items.map((item) => {
-    const itemTotal = item.product.price.mul(item.quantity);
+    const itemTotal = item.unitPrice.mul(item.quantity);
+
     subtotal = subtotal.plus(itemTotal);
     totalItems += item.quantity;
 
@@ -42,14 +43,16 @@ const getFormattedCart = async (cartId) => {
       id: item.id,
       product: {
         id: item.product.id,
+        storeId: item.product.storeId,
         name: item.product.name,
         description: item.product.description,
-        price: item.product.price.toFixed(2),
+        price: item.unitPrice.toFixed(2),
         imageUrl: item.product.imageUrl,
         category: item.product.category,
         isAvailable: item.product.isAvailable,
       },
       quantity: item.quantity,
+      unitPrice: item.unitPrice.toFixed(2),
       itemTotal: itemTotal.toFixed(2),
     };
   });
@@ -80,7 +83,6 @@ const addItemToCart = async (req, res, next) => {
   try {
     const { productId, quantity } = req.body;
 
-    // Validate productId
     if (!productId || typeof productId !== 'string' || productId.trim() === '') {
       return res.status(400).json({
         success: false,
@@ -88,7 +90,6 @@ const addItemToCart = async (req, res, next) => {
       });
     }
 
-    // Validate quantity: must be an integer > 0
     if (
       quantity === undefined ||
       quantity === null ||
@@ -102,7 +103,6 @@ const addItemToCart = async (req, res, next) => {
       });
     }
 
-    // Find product in DB (price is taken from DB only)
     const product = await prisma.product.findUnique({
       where: { id: productId.trim() },
     });
@@ -121,9 +121,15 @@ const addItemToCart = async (req, res, next) => {
       });
     }
 
+    if (product.trackInventory && Number(product.stockQuantity ?? 0) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product is currently out of stock',
+      });
+    }
+
     const cart = await getOrCreateUserCart(req.user.id);
 
-    // Atomically upsert cart item: increment quantity if exists, create if not
     await prisma.cartItem.upsert({
       where: {
         cartId_productId: {
@@ -140,6 +146,7 @@ const addItemToCart = async (req, res, next) => {
         cartId: cart.id,
         productId: product.id,
         quantity,
+        unitPrice: product.price,
       },
     });
 
@@ -160,7 +167,6 @@ const updateCartItem = async (req, res, next) => {
     const { id } = req.params;
     const { quantity } = req.body;
 
-    // Validate quantity
     if (
       quantity === undefined ||
       quantity === null ||
@@ -174,7 +180,6 @@ const updateCartItem = async (req, res, next) => {
       });
     }
 
-    // Find item and verify ownership through cart -> user
     const cartItem = await prisma.cartItem.findUnique({
       where: { id },
       include: {
@@ -182,7 +187,7 @@ const updateCartItem = async (req, res, next) => {
       },
     });
 
-    if (!cartItem || cartItem.cart.userId !== req.user.id) {
+    if (!cartItem || cartItem.cart.studentId !== req.user.id) {
       return res.status(404).json({
         success: false,
         message: 'Cart item not found',
@@ -210,7 +215,6 @@ const deleteCartItem = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Find item and verify ownership
     const cartItem = await prisma.cartItem.findUnique({
       where: { id },
       include: {
@@ -218,7 +222,7 @@ const deleteCartItem = async (req, res, next) => {
       },
     });
 
-    if (!cartItem || cartItem.cart.userId !== req.user.id) {
+    if (!cartItem || cartItem.cart.studentId !== req.user.id) {
       return res.status(404).json({
         success: false,
         message: 'Cart item not found',
@@ -244,7 +248,7 @@ const deleteCartItem = async (req, res, next) => {
 const clearCart = async (req, res, next) => {
   try {
     const cart = await prisma.cart.findFirst({
-      where: { userId: req.user.id },
+      where: { studentId: req.user.id },
     });
 
     if (cart) {

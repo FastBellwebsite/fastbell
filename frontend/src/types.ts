@@ -54,10 +54,15 @@ export interface StudentProfile extends BaseProfile {
 export interface VendorProfile extends BaseProfile {
   role: 'vendor';
   storeId: string;
+  storeIds?: string[];
+  vendorProfileId?: string;
   businessName?: string;
   storeName?: string;
   category?: string;
   description?: string;
+  locationLabel?: string;
+  deliveryMinutes?: number;
+  imageUrl?: string;
 }
 
 export interface DeliveryProfile extends BaseProfile {
@@ -87,6 +92,8 @@ export interface Store {
   id: string;
   campusId: string;
   vendorId: string;
+  vendorUserId?: string;
+  vendorProfileId?: string;
   name: string;
   category: string;
   isOpen: boolean;
@@ -115,6 +122,10 @@ export interface Product {
   rating: number;
   image: string;
   description: string;
+  stockQuantity?: number;
+  lowStockThreshold?: number;
+  trackInventory?: boolean;
+  stockStatus?: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'SERVICE';
   isAvailable: boolean;
   available?: boolean;
 }
@@ -123,6 +134,7 @@ export interface CartItem {
   productId: string;
   storeId: string;
   quantity: number;
+  cartItemId?: string;
 }
 
 export interface PopulatedCartItem {
@@ -136,12 +148,15 @@ export interface Address {
   label: string;
   line: string;
   locality?: string;
+  hostelName?: string;
+  roomNumber?: string;
   city?: string;
   state?: string;
   postalCode?: string;
   landmark?: string;
   latitude?: number;
   longitude?: number;
+  isDefault?: boolean;
 }
 
 /**
@@ -157,6 +172,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  orderNumber?: string;
   campusId: string;
   studentId: string;
   storeId: string;
@@ -170,11 +186,32 @@ export interface Order {
   total: number;
 
   status: OrderStatus;
+  cancellationRemainingSeconds?: number;
+  cancellationWindowMinutes?: number;
+  canCancel?: boolean;
   address: Address;
   payment: string;
 
+  customer?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string | null;
+  } | null;
+  student?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string | null;
+  } | null;
+
   rating?: number;
   feedback?: string;
+  store?: {
+    id: string;
+    name: string;
+    imageUrl?: string;
+  } | null;
 }
 
 export interface PersistedData {

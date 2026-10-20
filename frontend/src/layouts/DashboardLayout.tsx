@@ -1,24 +1,21 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Store, Users, LogOut, ShoppingBag, UserCircle, LayoutGrid, Package } from 'lucide-react';
+import { Store, Users, Bike, LogOut, ShoppingBag, UserCircle, LayoutGrid, Package } from 'lucide-react';
 import { ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Role } from '@/types';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-const roleConfig: Record<Exclude<Role, 'student'>, { title: string; links: { to: string; label: string; icon: typeof LayoutGrid }[]; accent: string }> = {
-  vendor: {
-    title: 'Vendor Center', accent: 'bg-[var(--fb-ink)] border-b-4 border-[var(--fb-blue)]', links: [
+const roleConfig: Record<Exclude<Role, 'student'>, { title: string; links: { to: string; label: string; icon: typeof LayoutGrid }[] }> = {
+  vendor: { title: 'Vendor Center', links: [
       { to: '/vendor', label: 'Overview', icon: LayoutGrid }, { to: '/vendor/products', label: 'Products', icon: Store }, { to: '/vendor/orders', label: 'Orders', icon: Package }, { to: '/vendor/profile', label: 'Settings', icon: UserCircle },
     ]
   },
-  delivery: {
-    title: 'Delivery Portal', accent: 'bg-[var(--fb-ink)] border-b-4 border-[var(--fb-blue)]', links: [
+  delivery: { title: 'Delivery Portal', links: [
       { to: '/delivery', label: 'Dashboard', icon: LayoutGrid }, { to: '/delivery/orders', label: 'Active Jobs', icon: Package }, { to: '/delivery/profile', label: 'Profile', icon: UserCircle },
     ]
   },
-  admin: {
-    title: 'Admin Console', accent: 'bg-[var(--fb-ink)] border-b-4 border-[var(--fb-blue)]', links: [
-      { to: '/admin', label: 'Metrics', icon: LayoutGrid }, { to: '/admin/users', label: 'Users', icon: Users }, { to: '/admin/vendors', label: 'Vendors', icon: Store }, { to: '/admin/products', label: 'Products', icon: Store }, { to: '/admin/orders', label: 'All Orders', icon: Package },
+  admin: { title: 'Admin Console', links: [
+      { to: '/admin', label: 'Metrics', icon: LayoutGrid }, { to: '/admin/users', label: 'Users', icon: Users }, { to: '/admin/delivery-partners', label: 'Delivery Fleet', icon: Bike }, { to: '/admin/vendors', label: 'Vendors', icon: Store }, { to: '/admin/products', label: 'Products', icon: Store }, { to: '/admin/orders', label: 'All Orders', icon: Package },
     ]
   },
 };
@@ -67,18 +64,18 @@ export default function DashboardLayout({ role }: { role: Exclude<Role, 'student
       <div className="flex flex-1 flex-col w-full min-w-0">
 
         {/* Top Header */}
-        <header className={`${cfg.accent} flex items-center justify-between px-6 py-5 text-white lg:px-10`}>
+        <header className="bg-[var(--fb-surface)] border-b border-[var(--fb-border)] flex items-center justify-between px-6 py-5 text-[var(--fb-ink)] lg:px-10 transition-colors duration-200">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-0.5">Welcome back</p>
-            <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight">{user.name}</h1>
+            <p className="text-xs font-bold uppercase tracking-widest text-[var(--fb-text-muted)] mb-0.5">Welcome back</p>
+            <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-[var(--fb-ink)]">{user.name}</h1>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <div className="hidden sm:block text-right">
-              <p className="text-sm font-semibold text-white/90">{user.email}</p>
-              <p className="text-xs font-bold text-white/60 uppercase tracking-widest">{role}</p>
+              <p className="text-sm font-semibold text-[var(--fb-ink)]">{user.email}</p>
+              <p className="text-xs font-bold text-[var(--fb-blue)] uppercase tracking-widest">{role}</p>
             </div>
-            <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 font-display text-lg font-bold shadow-sm">
+            <div className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] border border-[var(--fb-border)] font-display text-lg font-bold shadow-sm">
               {user.name.charAt(0)}
             </div>
           </div>

@@ -15,7 +15,7 @@ export function PageHeader({ title, subtitle, back }: { title: string; subtitle?
 export function EmptyState({ icon, title, message, action }: { icon: ReactNode; title: string; message: string; action?: ReactNode }) {
   return (
     <div className="card flex flex-col items-center justify-center px-6 py-6 text-center">
-      <div className="grid h-16 w-16 place-items-center rounded-2xl bg-background-50 text-[var(--fb-blue)]">{icon}</div>
+      <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] border border-[var(--fb-border)]">{icon}</div>
       <h3 className="mt-4 font-display text-xl font-bold text-[var(--fb-ink)]">{title}</h3>
       <p className="mt-1 max-w-sm text-[var(--fb-ink)]/60">{message}</p>
       {action && <div className="mt-5">{action}</div>}
@@ -29,6 +29,8 @@ export function StatusBadge({ status }: { status: string }) {
     ACCEPTED: 'bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] border border-[var(--fb-blue)]/20',
     PREPARING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
     READY: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20',
+    READY_FOR_PICKUP: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
+    PICKED_UP: 'bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] border border-[var(--fb-blue)]/20',
     OUT_FOR_DELIVERY: 'bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] border border-[var(--fb-blue)]/30 font-extrabold',
     DELIVERED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
     CANCELLED: 'bg-red-500/10 text-[var(--fb-danger)] border border-red-500/20',

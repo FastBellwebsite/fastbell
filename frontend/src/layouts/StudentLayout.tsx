@@ -57,7 +57,7 @@ export default function StudentLayout() {
       )}
 
       {/* Mobile Bottom Dock (App-Like Quick Commerce) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-[var(--fb-border)] bg-white/95 backdrop-blur-lg pb-safe pt-1.5 pb-2 md:hidden shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-[var(--fb-border)] bg-[var(--fb-surface)]/95 backdrop-blur-md pb-safe pt-1.5 pb-2 md:hidden shadow-lg">
         {navItems.map(({ to, icon: Icon, label, badge }) => (
           <NavLink
             key={label}

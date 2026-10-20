@@ -182,7 +182,7 @@ export default function Login() {
             {/* Vendor Card - Smaller block with Manage your store */}
             <Link
               to="/auth/vendor"
-              className="flex-1 group rounded-none border border-[var(--fb-border)] dark:border-white/10 bg-[var(--role-vendor-surface)] dark:bg-[#11141c] hover:border-amber-500/60 transition-all duration-300 relative overflow-hidden p-6 lg:p-7 flex flex-col justify-between min-h-[180px] lg:h-[220px] shadow-sm"
+              className="flex-1 group rounded-none border border-[var(--fb-border)] dark:border-white/10 bg-[var(--role-vendor-surface)] hover:border-amber-500/60 transition-all duration-300 relative overflow-hidden p-6 lg:p-7 flex flex-col justify-between min-h-[180px] lg:h-[220px] shadow-sm"
             >
               <div className="absolute inset-0 z-0 opacity-25 dark:opacity-30 group-hover:opacity-40 dark:group-hover:opacity-45 transition-opacity duration-500 overflow-hidden">
                 <img
@@ -193,7 +193,7 @@ export default function Login() {
                     (e.target as HTMLImageElement).src = '/products/classmate-notebook.webp';
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--role-vendor-surface)] dark:from-[#11141c] via-[var(--role-vendor-surface)]/85 dark:via-[#11141c]/85 to-[var(--role-vendor-surface)]/40 dark:to-[#11141c]/40 transition-colors duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--role-vendor-surface)] via-[var(--role-vendor-surface)]/85 to-[var(--role-vendor-surface)]/40 transition-colors duration-500" />
               </div>
 
               <div className="relative z-10">
@@ -217,7 +217,7 @@ export default function Login() {
             {/* Delivery Card - Smaller block with Start route */}
             <Link
               to="/auth/delivery"
-              className="flex-1 group rounded-none border border-[var(--fb-border)] dark:border-white/10 bg-[var(--role-delivery-surface)] dark:bg-[#11141c] hover:border-emerald-500/60 transition-all duration-300 relative overflow-hidden p-6 lg:p-7 flex flex-col justify-between min-h-[180px] lg:h-[220px] shadow-sm"
+              className="flex-1 group rounded-none border border-[var(--fb-border)] dark:border-white/10 bg-[var(--role-delivery-surface)] hover:border-emerald-500/60 transition-all duration-300 relative overflow-hidden p-6 lg:p-7 flex flex-col justify-between min-h-[180px] lg:h-[220px] shadow-sm"
             >
               <div className="absolute inset-0 z-0 opacity-25 dark:opacity-30 group-hover:opacity-40 dark:group-hover:opacity-45 transition-opacity duration-500 overflow-hidden">
                 <img
@@ -228,7 +228,7 @@ export default function Login() {
                     (e.target as HTMLImageElement).src = '/products/daily-wash.webp';
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--role-delivery-surface)] dark:from-[#11141c] via-[var(--role-delivery-surface)]/85 dark:via-[#11141c]/85 to-[var(--role-delivery-surface)]/40 dark:to-[#11141c]/40 transition-colors duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--role-delivery-surface)] via-[var(--role-delivery-surface)]/85 to-[var(--role-delivery-surface)]/40 transition-colors duration-500" />
               </div>
 
               <div className="relative z-10">
@@ -254,7 +254,7 @@ export default function Login() {
         {/* Bottom Horizontal Quiet Admin Bar */}
         <Link
           to="/auth/admin"
-          className="group w-full rounded-none border border-[var(--fb-border)] dark:border-white/10 bg-[var(--role-admin-surface)] dark:bg-[#11141c] hover:border-purple-500/50 px-6 py-3.5 flex items-center justify-between transition-all duration-300 shadow-xs"
+          className="group w-full rounded-none border border-[var(--fb-border)] dark:border-white/10 bg-[var(--role-admin-surface)] hover:border-purple-500/50 px-6 py-3.5 flex items-center justify-between transition-all duration-300 shadow-xs"
         >
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 rounded-none bg-[var(--fb-bg)] dark:bg-white/5 border border-[var(--fb-border)] dark:border-white/10 flex items-center justify-center text-[var(--fb-text-secondary)] dark:text-white/60 group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-all duration-300">

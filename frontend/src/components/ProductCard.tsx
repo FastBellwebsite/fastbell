@@ -71,7 +71,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
           {/* Discount Tag */}
           {hasDiscount && (
-            <span className="absolute left-0 top-0 bg-[var(--fb-ink)] px-2 py-1 text-[11px] font-bold tracking-wider text-[var(--fb-surface)] uppercase">
+            <span className="absolute left-0 top-0 bg-[var(--fb-ink)] px-2 py-1 text-[11px] font-bold tracking-wider text-[var(--fb-surface)] dark:bg-[var(--fb-blue)] dark:text-white uppercase">
               Save ₹{(product.originalPrice || 0) - product.price}
             </span>
           )}
@@ -126,7 +126,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
             {/* Availability / Add Action */}
             <div className="h-8 relative min-w-[70px] flex justify-end">
-              {product.isAvailable ? (
+              {product.isAvailable && (product.trackInventory === false || Number(product.stockQuantity ?? 0) > 0) ? (
                 <div className="relative w-full h-full flex justify-end">
                   {/* The Add Button (Fades out when qty > 0) */}
                   <button
@@ -144,12 +144,12 @@ export default function ProductCard({ product }: { product: Product }) {
                       e.preventDefault();
                       e.stopPropagation();
                     }}
-                    className={`absolute inset-y-0 right-0 flex items-center bg-[var(--fb-ink)] text-white rounded-sm transition-all duration-200 origin-right shadow-xs
+                    className={`absolute inset-y-0 right-0 flex items-center bg-[var(--fb-ink)] text-[var(--fb-surface)] dark:bg-[var(--fb-blue)] dark:text-white rounded-sm transition-all duration-200 origin-right shadow-xs
                       ${quantity > 0 ? 'opacity-100 scale-100 w-auto' : 'opacity-0 scale-95 pointer-events-none w-0 overflow-hidden'}`}
                   >
                     <button
                       onClick={handleDecrement}
-                      className="h-full px-2.5 flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all cursor-pointer"
+                      className="h-full px-2.5 flex items-center justify-center hover:opacity-80 active:scale-90 transition-all cursor-pointer"
                       aria-label="Decrease quantity"
                     >
                       <Minus size={12} strokeWidth={3} />
@@ -159,16 +159,20 @@ export default function ProductCard({ product }: { product: Product }) {
                     </span>
                     <button
                       onClick={handleIncrement}
-                      className="h-full px-2.5 flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all cursor-pointer"
+                      className="h-full px-2.5 flex items-center justify-center hover:opacity-80 active:scale-90 transition-all cursor-pointer"
                       aria-label="Increase quantity"
                     >
                       <Plus size={12} strokeWidth={3} />
                     </button>
                   </div>
                 </div>
+              ) : !product.isAvailable ? (
+                <span className="flex items-center h-full bg-[var(--fb-bg)] px-2 text-[10px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)] rounded-sm" title="Merchant temporarily disabled">
+                  Unavailable
+                </span>
               ) : (
-                <span className="flex items-center h-full bg-[var(--fb-bg)] px-2.5 text-[11px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)] rounded-sm">
-                  Out
+                <span className="flex items-center h-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 px-2 text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 rounded-sm" title="Out of physical stock">
+                  Out of Stock
                 </span>
               )}
             </div>

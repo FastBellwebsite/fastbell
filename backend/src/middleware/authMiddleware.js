@@ -32,7 +32,9 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    if (!decoded || !decoded.id) {
+    const userId = decoded?.id || decoded?.userId || decoded?.sub;
+
+    if (!userId) {
       return res.status(401).json({
         success: false,
         message: 'Invalid token payload'
@@ -41,7 +43,7 @@ const authMiddleware = async (req, res, next) => {
 
     const user = await prisma.user.findUnique({
       where: {
-        id: decoded.id
+        id: userId
       },
       select: {
         id: true,
@@ -75,4 +77,44 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+const requireRole = (...roles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  const normalizedUserRole = String(req.user.role || '').toUpperCase();
+  const normalizedRoles = roles.map(r => String(r).toUpperCase());
+
+  const roleMatches = normalizedRoles.some(r => {
+    if (r === normalizedUserRole) return true;
+    if (
+      (r === 'DELIVERY' || r === 'DELIVERY_PARTNER') &&
+      (normalizedUserRole === 'DELIVERY' || normalizedUserRole === 'DELIVERY_PARTNER')
+    ) {
+      return true;
+    }
+    return false;
+  });
+
+  if (!roleMatches) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied: administrator privileges required.'
+    });
+  }
+
+  next();
+};
+
+const requireAdmin = requireRole('ADMIN');
+
+authMiddleware.requireRole = requireRole;
+authMiddleware.requireAdmin = requireAdmin;
+
 module.exports = authMiddleware;
+module.exports.authMiddleware = authMiddleware;
+module.exports.requireRole = requireRole;
+module.exports.requireAdmin = requireAdmin;

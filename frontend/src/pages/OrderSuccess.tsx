@@ -20,7 +20,7 @@ export default function OrderSuccess() {
           <div className="grid h-16 w-16 place-items-center rounded-full bg-[var(--fb-blue-soft)] text-[var(--fb-blue)]"><CheckCircle className="h-9 w-9" /></div>
           <h1 className="mt-4 font-display text-2xl font-extrabold text-[var(--fb-ink)]">Order placed!</h1>
           <p className="mt-1 text-[var(--fb-ink)]/60">Thank you. Your essentials are on the way.</p>
-          <p className="mt-3 rounded-full bg-background-50 px-4 py-1.5 font-mono text-sm font-bold text-[var(--fb-blue)]">#{order.id}</p>
+          <p className="mt-3 rounded-full bg-[var(--fb-blue-soft)] px-4 py-1.5 font-mono text-sm font-bold text-[var(--fb-blue)] border border-[var(--fb-border)]">#{order.id}</p>
         </div>
 
         <div className="card mt-5 p-6">
@@ -28,7 +28,7 @@ export default function OrderSuccess() {
           <div className="mt-4 space-y-3">
             {order.items.map(item => (
               <div key={item.productId} className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-lg bg-background-100 text-[var(--fb-ink)]">
+                <div className="grid h-10 w-10 place-items-center rounded-lg bg-[var(--fb-bg)] border border-[var(--fb-border)] text-[var(--fb-ink)]">
                   <Box className="h-5 w-5" />
                 </div>
                 <div className="flex-1"><p className="text-sm font-semibold text-[var(--fb-ink)]">{item.name}</p><p className="text-xs text-[var(--fb-ink)]/50">Qty {item.quantity} × ₹{item.unitPrice}</p></div>
@@ -36,7 +36,7 @@ export default function OrderSuccess() {
               </div>
             ))}
           </div>
-          <div className="mt-4 space-y-2 border-t border-[#ebe3da] pt-4 text-sm">
+          <div className="mt-4 space-y-2 border-t border-[var(--fb-border)] pt-4 text-sm">
             <div className="flex justify-between font-bold"><span className="text-[var(--fb-ink)]">Total</span><span className="font-display text-lg text-[var(--fb-ink)]">₹{order.total}</span></div>
             <div className="flex items-start gap-2 text-[var(--fb-ink)]/60"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /> {order.address.line}, {order.address.landmark}</div>
             <div className="flex items-center gap-2 text-[var(--fb-ink)]/60"><Clock className="h-4 w-4" /> Est. delivery in 12–15 min</div>

@@ -15,7 +15,9 @@ export const getOrdersForVendor = (orders: Order[], storeIdOrIds: string | strin
 
 export const getAvailableDeliveries = (orders: Order[], campusId: string | null): Order[] => {
   return orders.filter(o => {
-    const campusMatch = !campusId || o.campusId === campusId;
+    const orderCampus = (o.campusId || (o as any).store?.campusId || '').trim().toLowerCase();
+    const targetCampus = (campusId || '').trim().toLowerCase();
+    const campusMatch = !targetCampus || !orderCampus || orderCampus === targetCampus;
     return campusMatch && o.status === 'READY_FOR_PICKUP' && !o.deliveryPartnerId;
   });
 };
@@ -35,5 +37,5 @@ export const getCompletedDeliveries = (orders: Order[], partnerId: string | null
 
 export const getOrderById = (orders: Order[], orderId: string | undefined): Order | undefined => {
   if (!orderId) return undefined;
-  return orders.find(o => o.id === orderId);
+  return orders.find(o => o.id === orderId || o.orderNumber === orderId);
 };

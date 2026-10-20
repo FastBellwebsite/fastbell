@@ -6,7 +6,7 @@ import { useStore } from '@/context/StoreContext';
 import { getStoreFallbackImage } from '@/utils/imageFallback';
 
 export default function StoreDetail() {
-  const { stores, products } = useStore();
+  const { stores, products, refreshData } = useStore();
   const { storeId } = useParams();
   const store = stores.find(s => s.id === storeId);
   const storeProducts = useMemo(() => products.filter(p => p.storeId === storeId), [products, storeId]);
@@ -15,7 +15,8 @@ export default function StoreDetail() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    refreshData();
+  }, [storeId]);
 
   const filteredList = useMemo(() => {
     return storeProducts.filter(p =>

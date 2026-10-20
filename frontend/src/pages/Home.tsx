@@ -42,13 +42,15 @@ export default function Home() {
   const navigate = useNavigate();
   const [homeSearch, setHomeSearch] = useState('');
   const [mounted, setMounted] = useState(false);
-  const { products, stores } = useStore();
+  const { products, stores, refreshData } = useStore();
   const { user } = useAuth();
   const { orders } = useOrder();
-  const categories = storage.getCategories();
+  const { categories: ctxCategories } = useStore();
+  const categories = ctxCategories && ctxCategories.length > 0 ? ctxCategories : storage.getCategories();
 
   useEffect(() => {
     setMounted(true);
+    refreshData();
   }, []);
 
   const campusId = user?.campusId || 'sns';
@@ -104,7 +106,7 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center min-h-[280px] md:min-h-[320px]">
           
           {/* LEFT ZONE: Greeting, Headline, Supporting Text, Search & Suggested Chips (Cols 1-7) */}
-          <div className="lg:col-span-7 flex flex-col justify-center pr-0 lg:pr-6">
+          <div className="lg:col-span-7 flex flex-col justify-center pr-0 lg:pr-6 relative z-30">
             
             {/* Greeting & Location Context */}
             <div className="mb-2">
@@ -205,18 +207,21 @@ export default function Home() {
             </div>
 
             {/* Suggested Searches */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[var(--fb-text-secondary)]">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[var(--fb-text-secondary)] relative z-40">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)] select-none">
                 SUGGESTED:
               </span>
               {quickSearchChips.map((chip) => (
-                <button
+                <Link
                   key={chip}
-                  onClick={() => navigate(`/shop?q=${encodeURIComponent(chip)}`)}
-                  className="text-xs font-medium text-[var(--fb-ink)] hover:text-[var(--fb-blue)] transition-colors hover:underline cursor-pointer"
+                  to={`/shop?q=${encodeURIComponent(chip)}`}
+                  onClick={(e) => {
+                    navigate(`/shop?q=${encodeURIComponent(chip)}`);
+                  }}
+                  className="text-xs font-medium text-[var(--fb-ink)] hover:text-[var(--fb-blue)] transition-colors hover:underline cursor-pointer relative z-50 inline-block py-0.5 px-1"
                 >
                   {chip}
-                </button>
+                </Link>
               ))}
             </div>
 
@@ -301,7 +306,7 @@ export default function Home() {
             {/* COMPONENT 4: Bottom-Left Item — Laundry */}
             <div 
               onClick={() => navigate('/category/cat-laundry')}
-              className="absolute bottom-2 sm:bottom-3 left-4 sm:left-8 z-25 w-28 sm:w-32 bg-[var(--fb-surface)] border border-[var(--fb-border)] p-1.5 shadow-md hover:shadow-lg transform rotate-3 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-pointer group"
+              className="absolute bottom-2 sm:bottom-3 left-4 sm:left-8 z-10 w-28 sm:w-32 bg-[var(--fb-surface)] border border-[var(--fb-border)] p-1.5 shadow-md hover:shadow-lg transform rotate-3 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-pointer group"
             >
               <div className="flex items-center justify-between mb-0.5 px-0.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
@@ -324,7 +329,7 @@ export default function Home() {
             {/* COMPONENT 5: Bottom-Right Item — Personal Care */}
             <div 
               onClick={() => navigate('/category/cat-care')}
-              className="absolute bottom-2 sm:bottom-3 right-4 sm:right-8 z-25 w-28 sm:w-32 bg-[var(--fb-surface)] border border-[var(--fb-border)] p-1.5 shadow-md hover:shadow-lg transform -rotate-4 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-pointer group"
+              className="absolute bottom-2 sm:bottom-3 right-4 sm:right-8 z-10 w-28 sm:w-32 bg-[var(--fb-surface)] border border-[var(--fb-border)] p-1.5 shadow-md hover:shadow-lg transform -rotate-4 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-pointer group"
             >
               <div className="flex items-center justify-between mb-0.5 px-0.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
@@ -371,20 +376,21 @@ export default function Home() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {categories.map((cat) => {
             const thumbnail =
-              cat.id === 'cat-food'
+              cat.id === 'cat-food' || cat.slug === 'food'
                 ? '/products/cheese-grilled-sandwich.webp'
-                : cat.id === 'cat-grocery'
+                : cat.id === 'cat-grocery' || cat.slug === 'groceries'
                 ? '/products/amul-milk.webp'
-                : cat.id === 'cat-stationery'
+                : cat.id === 'cat-stationery' || cat.slug === 'stationery'
                 ? '/products/classmate-notebook.webp'
-                : cat.id === 'cat-laundry'
+                : cat.id === 'cat-laundry' || cat.slug === 'laundry'
                 ? '/products/daily-wash.webp'
                 : '/products/dettol-sanitizer.webp';
 
             return (
               <button
                 key={cat.id}
-                onClick={() => navigate(`/category/${cat.id}`)}
+                type="button"
+                onClick={() => navigate(`/category/${cat.id || cat.slug}`)}
                 className="group relative flex items-center gap-3 p-2.5 sm:p-3 bg-[var(--fb-surface)] border border-[var(--fb-border)] hover:border-[var(--fb-blue)] hover:-translate-y-0.5 hover:shadow-xs transition-all duration-200 text-left cursor-pointer rounded-sm"
               >
                 <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 bg-[var(--fb-bg)] border border-[var(--fb-border)] overflow-hidden">

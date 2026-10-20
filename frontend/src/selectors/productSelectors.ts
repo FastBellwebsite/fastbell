@@ -5,8 +5,38 @@ import { storage } from '../services/storage';
 /**
  * Robust availability check checking both isAvailable and available properties.
  */
+/**
+ * FastBell Inventory Classification Rules:
+ * - Active + positive tracked stock: IN_STOCK (not out of stock)
+ * - Active + zero tracked stock: OUT_OF_STOCK (out of stock, but vendor-enabled)
+ * - Vendor-disabled: UNAVAILABLE / DISABLED (unavailable because vendor disabled it, not out of stock)
+ * - Inventory tracking disabled: SERVICE (never out of stock solely because quantity is zero)
+ */
 export const isProductAvailable = (p: Product): boolean => {
-  return p.isAvailable !== false && p.available !== false;
+  const isOutOfStock = p.trackInventory !== false && Number(p.stockQuantity ?? 0) <= 0;
+  return p.isAvailable !== false && p.available !== false && !isOutOfStock;
+};
+
+export const isProductInStock = (p: Product): boolean => {
+  if (p.trackInventory === false) return true;
+  return Number(p.stockQuantity ?? 0) > 0;
+};
+
+export const isProductOutOfStock = (p: Product): boolean => {
+  if (p.trackInventory === false) return false;
+  return Number(p.stockQuantity ?? 0) <= 0;
+};
+
+export const isProductVendorDisabled = (p: Product): boolean => {
+  return p.isAvailable === false || p.available === false;
+};
+
+export const isProductLowStock = (p: Product): boolean => {
+  if (p.trackInventory === false) return false;
+  if (p.isAvailable === false || p.available === false) return false;
+  const qty = Number(p.stockQuantity ?? 0);
+  const thresh = Number(p.lowStockThreshold ?? 5);
+  return qty > 0 && qty <= thresh;
 };
 
 export const getProductsByStore = (products: Product[], storeId: string): Product[] => {

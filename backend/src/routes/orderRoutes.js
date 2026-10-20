@@ -4,6 +4,9 @@ const {
   createOrder,
   getOrders,
   getOrderById,
+  updateOrderStatus,
+  cancelOrder,
+  claimOrder,
 } = require('../controllers/orderController');
 const { getPaymentByOrderId } = require('../controllers/paymentController');
 const { getDeliveryByOrderId } = require('../controllers/deliveryController');
@@ -16,5 +19,8 @@ router.get('/', getOrders);
 router.get('/:orderId/payment', getPaymentByOrderId);
 router.get('/:orderId/delivery', getDeliveryByOrderId);
 router.get('/:id', getOrderById);
+router.patch('/:id/status', updateOrderStatus);
+router.post('/:id/cancel', cancelOrder);
+router.post('/:id/claim', claimOrder);
 
 module.exports = router;

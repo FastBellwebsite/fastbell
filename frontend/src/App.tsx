@@ -43,6 +43,7 @@ import DeliveryProfile from '@/pages/delivery/DeliveryProfile';
 
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminUsers from '@/pages/admin/AdminUsers';
+import AdminDeliveryPartners from '@/pages/admin/AdminDeliveryPartners';
 import AdminVendors from '@/pages/admin/AdminVendors';
 import AdminProducts from '@/pages/admin/AdminProducts';
 import AdminOrders from '@/pages/admin/AdminOrders';
@@ -100,6 +101,7 @@ export default function App() {
                 <Route path="/admin" element={<ProtectedRoute role="admin"><DashboardLayout role="admin" /></ProtectedRoute>}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="users" element={<AdminUsers />} />
+                  <Route path="delivery-partners" element={<AdminDeliveryPartners />} />
                   <Route path="vendors" element={<AdminVendors />} />
                   <Route path="products" element={<AdminProducts />} />
                   <Route path="orders" element={<AdminOrders />} />

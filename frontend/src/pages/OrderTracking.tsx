@@ -10,12 +10,13 @@ import {
   Check,
   Box,
   Star,
-  PackageCheck
+  PackageCheck,
+  AlertCircle
 } from 'lucide-react';
 import { useOrder } from '@/context/OrderContext';
 import { useStore } from '@/context/StoreContext';
 import { mockUserService } from '@/services/mockUserService';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { OrderStatus } from '@/types';
 
@@ -32,12 +33,107 @@ const steps: { status: OrderStatus; label: string; icon: any; verb: string }[] =
 export default function OrderTracking() {
   const { user } = useAuth();
   const { orderId } = useParams();
-  const { orders, rateOrder } = useOrder();
+  const { orders, rateOrder, getOrderById, refreshOrders, cancelOrder, isLoading } = useOrder();
+  const [fetchedOrder, setFetchedOrder] = useState<any>(null);
+  const [isFetchingLocal, setIsFetchingLocal] = useState(false);
   const { stores } = useStore();
 
   const [rating, setRating] = useState(0);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellationTimeLeft, setCancellationTimeLeft] = useState<number>(0);
 
-  const order = orders.find(o => o.id === orderId);
+  // 1. Resolve order from local context cache or fetched order first
+  const order = orders.find(o => o.id === orderId || o.orderNumber === orderId) || fetchedOrder;
+
+  // 2. Fetch order if not already in context cache
+  useEffect(() => {
+    if (!orderId) return;
+    const exists = orders.find(o => o.id === orderId || o.orderNumber === orderId);
+    if (!exists) {
+      setIsFetchingLocal(true);
+      getOrderById(orderId)
+        .then(res => {
+          if (res) setFetchedOrder(res);
+        })
+        .finally(() => setIsFetchingLocal(false));
+    }
+  }, [orderId, orders, getOrderById]);
+
+  // 3. Compute cancellation timer when order is loaded and PLACED
+  useEffect(() => {
+    if (!order || order.status !== 'PLACED') {
+      setCancellationTimeLeft(0);
+      return;
+    }
+
+    const calcLeft = () => {
+      const createdTime = new Date(order.date || (order as any).createdAt).getTime();
+      const elapsed = Date.now() - createdTime;
+      const windowMs = (order.cancellationWindowMinutes || 5) * 60 * 1000;
+      return Math.max(0, Math.floor((windowMs - elapsed) / 1000));
+    };
+
+    setCancellationTimeLeft(calcLeft());
+
+    const timer = setInterval(() => {
+      const left = calcLeft();
+      setCancellationTimeLeft(left);
+      if (left <= 0) {
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [order?.status, order?.date, (order as any)?.createdAt, order?.cancellationWindowMinutes]);
+
+  const canCancelOrder =
+    Boolean(user && user.role === 'student' && order && order.studentId === user.id) &&
+    order?.status === 'PLACED' &&
+    cancellationTimeLeft > 0;
+
+  const handleConfirmCancel = async () => {
+    if (!order || isCancelling) return;
+    try {
+      setIsCancelling(true);
+      await cancelOrder(order.id);
+      setShowCancelModal(false);
+      await refreshOrders().catch(() => {});
+      if (orderId) {
+        const updated = await getOrderById(orderId);
+        if (updated) setFetchedOrder(updated);
+      }
+    } catch {
+      // error handled by context toast
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+
+  useEffect(() => {
+    if (!order || order.status === 'DELIVERED' || order.status === 'CANCELLED') return;
+    const timer = setInterval(() => {
+      refreshOrders().catch(() => {});
+      if (orderId) {
+        getOrderById(orderId).then(res => {
+          if (res) setFetchedOrder(res);
+        }).catch(() => {});
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [order?.status, orderId, refreshOrders, getOrderById]);
+
+  if (!order && (isLoading || isFetchingLocal)) {
+    return (
+      <div className="min-h-[40vh] bg-[var(--fb-bg)] flex flex-col items-center justify-center font-sans px-4">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-2 border-[var(--fb-brand)] border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-sm text-[var(--fb-text-muted)] font-medium">Tracking order status...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -94,9 +190,7 @@ export default function OrderTracking() {
   const currentStep = currentIndex >= 0 ? steps[currentIndex] : null;
 
   const store = stores.find(s => s.id === order.storeId);
-  const driver = order.deliveryPartnerId
-    ? mockUserService.getUserById(order.deliveryPartnerId)
-    : null;
+  const driver = (order as any)?.delivery?.deliveryPartner || (order as any)?.deliveryPartner || (order.deliveryPartnerId ? mockUserService.getUserById(order.deliveryPartnerId) : null);
 
   return (
     <div className="min-h-screen bg-[var(--fb-bg)] pb-12 pt-6 md:pt-8 font-sans selection:bg-[var(--fb-blue)] selection:text-white fade-in">
@@ -120,7 +214,7 @@ export default function OrderTracking() {
 
         {/* Order Creation Moment / Confirmation Notice */}
         {order.status === 'PLACED' && (
-          <div className="mb-6 p-4 sm:p-5 bg-[var(--fb-surface)] border-2 border-[var(--fb-blue)] rounded-xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 fade-in">
+          <div className="mb-6 p-4 sm:p-5 bg-[var(--fb-surface)] border-2 border-[var(--fb-blue)] rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 fade-in">
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-lg bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] flex items-center justify-center font-bold shrink-0">
                 <CheckCircle size={22} />
@@ -131,17 +225,79 @@ export default function OrderTracking() {
                     ORDER PLACED
                   </span>
                   <span className="font-mono text-xs font-bold text-[var(--fb-blue)] bg-[var(--fb-blue-soft)] px-2 py-0.5 rounded">
-                    #{order.id}
+                    #{order.orderNumber || order.id.slice(0, 8)}
                   </span>
                 </div>
                 <p className="text-xs text-[var(--fb-text-secondary)] mt-0.5">
-                  Store: <strong className="text-[var(--fb-ink)]">{store?.name || 'Campus Store'}</strong> • {order.items.reduce((acc, i) => acc + i.quantity, 0)} item(s) • Total ₹{order.total}
+                  Store: <strong className="text-[var(--fb-ink)]">{store?.name || 'Campus Store'}</strong> • {order.items.reduce((acc: number, i: any) => acc + i.quantity, 0)} item(s) • Total ₹{order.total}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--fb-blue)] bg-[var(--fb-blue-soft)] px-3 py-1.5 rounded-lg w-fit shrink-0">
-              <span className="w-2 h-2 rounded-full bg-[var(--fb-blue)] animate-ping" />
-              <span>Current Status: Placed • Sent to Kitchen</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              {cancellationTimeLeft > 0 ? (
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 px-3 py-1.5 rounded-lg">
+                  <Clock size={13} className="animate-spin text-amber-600" />
+                  <span>Cancel window: <strong>{Math.floor(cancellationTimeLeft / 60)}m {cancellationTimeLeft % 60}s</strong> remaining</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs font-semibold text-[var(--fb-text-muted)] bg-[var(--fb-bg)] border border-[var(--fb-border)] px-3 py-1.5 rounded-lg">
+                  <Clock size={13} />
+                  <span>Cancellation window closed</span>
+                </div>
+              )}
+
+              {canCancelOrder && (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(true)}
+                  disabled={isCancelling}
+                  className="px-3.5 py-1.5 text-xs font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg transition-all duration-200 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel Order
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal */}
+        {showCancelModal && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-[var(--fb-surface)] border border-[var(--fb-border)] rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-xl fade-in">
+              <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 flex items-center justify-center mb-4">
+                <AlertCircle size={24} />
+              </div>
+              <h3 className="font-display text-xl font-bold text-[var(--fb-ink)] mb-2">
+                Cancel this order?
+              </h3>
+              <p className="text-xs sm:text-sm text-[var(--fb-text-secondary)] leading-relaxed mb-6">
+                Are you sure you want to cancel order <strong>#{order.orderNumber || order.id.slice(0, 8)}</strong>? Reserved items will be released back to the store inventory. This action cannot be undone.
+              </p>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  disabled={isCancelling}
+                  className="px-4 py-2 text-xs font-semibold text-[var(--fb-text-secondary)] hover:text-[var(--fb-ink)] rounded-xl border border-[var(--fb-border)] hover:bg-[var(--fb-bg)] transition-colors cursor-pointer"
+                >
+                  Keep Order
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmCancel}
+                  disabled={isCancelling}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                >
+                  {isCancelling ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Cancelling...</span>
+                    </>
+                  ) : (
+                    <span>Confirm Cancellation</span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -160,7 +316,7 @@ export default function OrderTracking() {
               </div>
             </div>
           ) : (
-            <div className="bg-[var(--fb-ink)] text-white p-8 md:p-10 rounded-2xl relative overflow-hidden flex flex-col items-center border border-[var(--fb-ink)] shadow-md">
+            <div className="bg-[#10131A] dark:bg-[var(--fb-surface-elevated)] text-white p-8 md:p-10 rounded-2xl relative overflow-hidden flex flex-col items-center border border-[#10131A] dark:border-[var(--fb-border)] shadow-md">
               <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-[var(--fb-blue)] to-transparent opacity-20 pointer-events-none mix-blend-screen" />
               
               <div className="relative z-10 text-center w-full mb-4">
@@ -173,7 +329,7 @@ export default function OrderTracking() {
                 <p className="text-sm sm:text-base text-white/90 font-normal max-w-2xl mx-auto leading-relaxed">
                   {order.status === 'DELIVERED'
                     ? 'Delivered to your location!'
-                    : `Arriving at ${order.address.line} (${order.address.landmark})`}
+                    : `Arriving at ${order.address?.line || 'Campus'} (${order.address?.landmark || 'Delivery Point'})`}
                 </p>
               </div>
 
@@ -211,7 +367,7 @@ export default function OrderTracking() {
                               ? 'bg-[var(--fb-blue)] border-[var(--fb-blue)] text-white scale-110 shadow-[0_0_30px_rgba(49,92,255,0.6)]'
                               : done
                               ? 'bg-[var(--fb-blue)] border-[var(--fb-blue)] text-white'
-                              : 'bg-[var(--fb-ink)] border-white/20 text-white/30'
+                              : 'bg-[#10131A] dark:bg-[var(--fb-surface)] border-white/20 text-white/30'
                           }`}
                         >
                           {done && !current && (
@@ -357,10 +513,10 @@ export default function OrderTracking() {
                     Delivering to
                   </p>
                   <p className="font-display font-black text-[var(--fb-ink)] text-sm line-clamp-1">
-                    {order.address.line}
+                    {order.address?.line || 'Campus Delivery Point'}
                   </p>
                   <p className="text-[10px] font-bold text-[var(--fb-text-secondary)] mt-0.5 uppercase tracking-widest">
-                    {order.address.landmark}
+                    {order.address?.landmark || 'Campus'}
                   </p>
                 </div>
               </div>
@@ -374,7 +530,7 @@ export default function OrderTracking() {
 
             <div className="bg-[var(--fb-surface)] p-6 border border-[var(--fb-border)]">
               <div className="space-y-4 max-h-[400px] overflow-y-auto mb-6 pr-2">
-                {order.items.map(item => (
+                {order.items.map((item: any) => (
                   <div
                     key={item.productId}
                     className="flex flex-col border-b border-[var(--fb-border)] pb-4 last:border-0 last:pb-0"

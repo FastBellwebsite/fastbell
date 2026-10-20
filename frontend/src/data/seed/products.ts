@@ -364,7 +364,7 @@ export const seedProducts: Product[] = [
     price: 65,
     originalPrice: 75,
     rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800&q=80',
+    image: '/products/cheese-grilled-sandwich.webp',
     description: 'Triple-decker toasted bread filled with fresh cucumber, tomato, beetroot, spicy mint chutney, and herb potatoes.',
     isAvailable: true,
     available: true
@@ -379,7 +379,7 @@ export const seedProducts: Product[] = [
     price: 90,
     originalPrice: 110,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=800&q=80',
+    image: '/products/samosa-chaat.webp',
     description: 'Flaky layered paratha wrapped around grilled spiced chicken chunks, crisp sliced onions, and green chili mint sauce.',
     isAvailable: true,
     available: true
@@ -393,7 +393,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 80,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&q=80',
+    image: '/products/paneer-butter-masala.webp',
     description: 'Soft tandoori paratha rolled with seasoned cottage cheese cubes, crunchy bell peppers, and tangy chaat masala.',
     isAvailable: true,
     available: true
@@ -407,7 +407,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 35,
     rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800&q=80',
+    image: '/products/samosa-chaat.webp',
     description: 'Oven-fresh flaky bakery pastry with savory spiced potato and sweet green pea filling, served with ketchup.',
     isAvailable: true,
     available: true
@@ -421,7 +421,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 45,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=800&q=80',
+    image: '/products/french-fries.webp',
     description: 'Crisp golden layered puff pastry wrapped around seasoned boiled egg halves sautéed in mild pepper masala.',
     isAvailable: true,
     available: true
@@ -436,7 +436,7 @@ export const seedProducts: Product[] = [
     price: 130,
     originalPrice: 150,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=800&q=80',
+    image: '/products/french-fries.webp',
     description: 'South Indian canteen style spicy fried chicken bites tossed with fresh curry leaves, green chilies, and lemon juice.',
     isAvailable: true,
     available: true
@@ -450,7 +450,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 130,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&q=80',
+    image: '/products/veg-fried-rice.webp',
     description: 'Aromatic wok-tossed long grain basmati rice with shredded chicken pieces, scrambled egg, garlic, and scallions.',
     isAvailable: true,
     available: true
@@ -464,7 +464,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 85,
     rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=800&q=80',
+    image: '/products/masala-maggi.webp',
     description: 'Street-style thin noodles stir-fried in a hot wok with shredded cabbage, bell peppers, carrots, and dark soy sauce.',
     isAvailable: true,
     available: true
@@ -478,7 +478,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 60,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1630383249896-424e482df921?w=800&q=80',
+    image: '/products/masala-dosa.webp',
     description: 'Flaky layered South Indian parottas served with rich coconut-based spiced vegetable kurma.',
     isAvailable: true,
     available: true
@@ -492,7 +492,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 50,
     rating: 4.4,
-    image: 'https://images.unsplash.com/photo-1505253758473-96b3015f240a?w=800&q=80',
+    image: '/products/south-indian-meals.webp',
     description: 'Home-style soft whole wheat chapatis served with aromatic tempered yellow dal, fresh lemon, and pickle.',
     isAvailable: true,
     available: true
@@ -506,7 +506,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 15,
     rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=800&q=80',
+    image: '/products/filter-coffee.webp',
     description: 'Steaming Assam tea brewed with crushed fresh ginger, cardamom pods, and rich creamy boiled milk.',
     isAvailable: true,
     available: true
@@ -520,7 +520,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 30,
     rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=800&q=80',
+    image: '/products/cold-coffee.webp',
     description: 'Freshly squeezed lime juice blended with chilled sparkling club soda, black rock salt, and mint syrup.',
     isAvailable: true,
     available: true
@@ -534,7 +534,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-food',
     price: 75,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=800&q=80',
+    image: '/products/cold-coffee.webp',
     description: 'Creamy thick milkshake made with pure Alphonso mango pulp, chilled whole milk, and vanilla ice cream.',
     isAvailable: false,
     available: false
@@ -552,7 +552,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 45,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&q=80',
+    image: '/products/bourbon-biscuits.webp',
     description: 'Fresh daily baked brown bread slices made with whole wheat grain, ideal for quick hostel breakfasts.',
     isAvailable: true,
     available: true
@@ -566,7 +566,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 48,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=800&q=80',
+    image: '/products/amul-milk.webp',
     description: 'Graded poultry farm eggs safely packed in a protective carton, rich in daily protein for active students.',
     isAvailable: true,
     available: true
@@ -580,7 +580,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 30,
     rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=800&q=80',
+    image: '/products/amul-milk.webp',
     description: 'Naturally ripened fresh yellow bananas, high in potassium and perfect for quick study energy.',
     isAvailable: true,
     available: true
@@ -595,7 +595,7 @@ export const seedProducts: Product[] = [
     price: 110,
     originalPrice: 130,
     rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=800&q=80',
+    image: '/products/amul-milk.webp',
     description: 'Crisp, sweet, and hand-sorted Himachal Pradesh hill apples washed and packed for hostel rooms.',
     isAvailable: true,
     available: true
@@ -609,7 +609,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 20,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=800&q=80',
+    image: '/products/bourbon-biscuits.webp',
     description: 'Crispy ridged potato chips seasoned with authentic hot Indian spices and tangy mango powder.',
     isAvailable: true,
     available: true
@@ -623,7 +623,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 40,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=800&q=80',
+    image: '/products/cold-coffee.webp',
     description: 'Chilled strong carbonated cola can delivering strong fizzy taste and caffeine punch for late study nights.',
     isAvailable: true,
     available: true
@@ -637,7 +637,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 56,
     rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=800&q=80',
+    image: '/products/masala-maggi.webp',
     description: 'Signature classic hostel noodles pack containing roasted aromatic spices and quick-cook wheat noodles.',
     isAvailable: true,
     available: true
@@ -651,7 +651,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 95,
     rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=800&q=80',
+    image: '/products/bourbon-biscuits.webp',
     description: '100% whole grain oats rich in dietary fiber, easy to cook in hot water or warm milk in dorm rooms.',
     isAvailable: true,
     available: true
@@ -666,7 +666,7 @@ export const seedProducts: Product[] = [
     price: 165,
     originalPrice: 190,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1521483451569-e33803c0330c?w=800&q=80',
+    image: '/products/bourbon-biscuits.webp',
     description: 'Crispy sun-dried corn flakes enriched with real Californian almond slices and natural bee honey.',
     isAvailable: true,
     available: true
@@ -680,7 +680,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 28,
     rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1518110903416-09c138865612?w=800&q=80',
+    image: '/products/amul-milk.webp',
     description: 'Purity guaranteed vacuum-evaporated iodized table salt essential for hostel kitchenette cooking.',
     isAvailable: true,
     available: true
@@ -694,7 +694,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 55,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=800&q=80',
+    image: '/products/amul-milk.webp',
     description: 'Sulphur-free sparkling white refined crystal sugar processed untouched by hand for tea and beverages.',
     isAvailable: true,
     available: true
@@ -708,7 +708,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 20,
     rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&q=80',
+    image: '/products/cold-coffee.webp',
     description: '10-step ozonated and mineral-enriched sealed drinking water bottle for lecture hall hydration.',
     isAvailable: true,
     available: true
@@ -722,7 +722,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-grocery',
     price: 35,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1571212515416-fef01fc43637?w=800&q=80',
+    image: '/products/amul-milk.webp',
     description: 'Thick, creamy pasteurized fresh curd made from toned milk, packed with active gut probiotics.',
     isAvailable: false,
     available: false
@@ -741,7 +741,7 @@ export const seedProducts: Product[] = [
     price: 135,
     originalPrice: 155,
     rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&q=80',
+    image: '/products/classmate-notebook.webp',
     description: 'Durable poly cover spiral notebook with 300 micro-perforated ruled pages and 4 divider tabs for engineering lectures.',
     isAvailable: true,
     available: true
@@ -755,7 +755,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-stationery',
     price: 85,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=800&q=80',
+    image: '/products/classmate-notebook.webp',
     description: 'One side ruled, one side blank heavyweight bond paper record notebook for lab practical observations and graph plotting.',
     isAvailable: true,
     available: true
@@ -769,7 +769,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-stationery',
     price: 60,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=800&q=80',
+    image: '/products/cello-pens.webp',
     description: 'Japanese precision 0.7mm tungsten carbide tip with pure liquid ink flow controller for non-skip semester exam writing.',
     isAvailable: true,
     available: true
@@ -783,7 +783,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-stationery',
     price: 110,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=800&q=80',
+    image: '/products/cello-pens.webp',
     description: 'Soft pastel highlighting markers in mint, lavender, peach, and lemon with water-based non-bleed ink.',
     isAvailable: true,
     available: true
@@ -797,7 +797,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-stationery',
     price: 70,
     rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=800&q=80',
+    image: '/products/classmate-notebook.webp',
     description: 'Rigid unbreakable smooth board with rust-proof heavy spring clamp designed for university exam halls.',
     isAvailable: true,
     available: true
@@ -811,7 +811,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-stationery',
     price: 45,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=800&q=80',
+    image: '/products/classmate-notebook.webp',
     description: '100 sheets of bright yellow repositionable memo pads for bookmarking textbook chapters and project reminders.',
     isAvailable: true,
     available: true
@@ -825,7 +825,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-stationery',
     price: 40,
     rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=800&q=80',
+    image: '/products/cello-pens.webp',
     description: '5 triangular dark 2B graphite pencils with comfort grooves, 2 dust-free white erasers, and 1 steel blade sharpener.',
     isAvailable: true,
     available: true
@@ -839,7 +839,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-stationery',
     price: 50,
     rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1568667256549-094345857637?w=800&q=80',
+    image: '/products/engineering-drafter.webp',
     description: 'Tear-resistant transparent A4 button envelope folders to safely organize assignment sheets, forms, and project reports.',
     isAvailable: false,
     available: false
@@ -858,7 +858,7 @@ export const seedProducts: Product[] = [
     price: 140,
     originalPrice: 165,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800&q=80',
+    image: '/products/dettol-sanitizer.webp',
     description: 'Soap-free herbal face wash formulation with neem and turmeric extract that purifies skin and prevents campus breakout acne.',
     isAvailable: true,
     available: true
@@ -872,7 +872,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-care',
     price: 160,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=800&q=80',
+    image: '/products/dettol-sanitizer.webp',
     description: 'Anti-dandruff formulation infused with cooling menthol crystals that deeply cleanses the scalp and refreshes tired hair.',
     isAvailable: true,
     available: true
@@ -887,7 +887,7 @@ export const seedProducts: Product[] = [
     price: 115,
     originalPrice: 130,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1607006314187-5421a2eb7596?w=800&q=80',
+    image: '/products/dettol-sanitizer.webp',
     description: 'Antibacterial bathing soap bars with classic pine fragrance protecting against 100 illness-causing germs.',
     isAvailable: true,
     available: true
@@ -902,7 +902,7 @@ export const seedProducts: Product[] = [
     price: 195,
     originalPrice: 225,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=800&q=80',
+    image: '/products/dettol-sanitizer.webp',
     description: 'Instant cooling sensation antiperspirant spray with a fresh masculine scent and zero ethyl alcohol.',
     isAvailable: true,
     available: true
@@ -916,7 +916,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-care',
     price: 180,
     rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&q=80',
+    image: '/products/colgate-maxfresh.webp',
     description: 'Fast-absorbing non-greasy moisturizing lotion infused with micro-droplets of petroleum jelly for long-lasting hydration.',
     isAvailable: true,
     available: true
@@ -930,7 +930,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-care',
     price: 40,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=800&q=80',
+    image: '/products/colgate-maxfresh.webp',
     description: 'Herbal lip balm enriched with carrot seed and castor oil to heal chapped, dry lips in AC lecture rooms.',
     isAvailable: true,
     available: true
@@ -944,7 +944,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-care',
     price: 35,
     rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&q=80',
+    image: '/products/colgate-maxfresh.webp',
     description: 'Ultra-soft 3-ply pocket tissue packs, lightweight and portable for lab aprons and campus backpacks.',
     isAvailable: true,
     available: true
@@ -958,7 +958,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-care',
     price: 85,
     rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=800&q=80',
+    image: '/products/dettol-sanitizer.webp',
     description: 'Multi-purpose sanitizing wipes with resealable lid for quick hygiene on classroom desks and hostel surfaces.',
     isAvailable: true,
     available: true
@@ -972,7 +972,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-care',
     price: 50,
     rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&q=80',
+    image: '/products/colgate-maxfresh.webp',
     description: 'Criss-cross angled bristles with soft gum stimulators and tongue cleaner for comprehensive oral protection.',
     isAvailable: true,
     available: true
@@ -986,7 +986,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-care',
     price: 175,
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80',
+    image: '/products/dettol-sanitizer.webp',
     description: 'Damage-repairing hair conditioner enriched with keratin and ceramide to fight dryness, roughness, and dullness.',
     isAvailable: false,
     available: false
@@ -1004,7 +1004,7 @@ export const seedProducts: Product[] = [
     categoryId: 'cat-laundry',
     price: 50,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800&q=80',
+    image: '/products/daily-wash.webp',
     description: 'Hostel laundry service with hot-water detergent wash, anti-bacterial fabric rinse, and steam press for 1 single bed sheet and 2 pillow covers.',
     isAvailable: true,
     available: true
@@ -1019,7 +1019,7 @@ export const seedProducts: Product[] = [
     price: 180,
     originalPrice: 220,
     rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?w=800&q=80',
+    image: '/products/steam-press.webp',
     description: 'High-priority same-day express laundry wash and tumble dry service for sudden interview calls, lab exams, and urgent travel.',
     isAvailable: true,
     available: true
@@ -1034,7 +1034,7 @@ export const seedProducts: Product[] = [
     price: 220,
     originalPrice: 260,
     rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80',
+    image: '/products/heavy-jacket.webp',
     description: 'Professional organic solvent dry cleaning for campus placement blazers and suits, delivered on a protective hanger.',
     isAvailable: true,
     available: true

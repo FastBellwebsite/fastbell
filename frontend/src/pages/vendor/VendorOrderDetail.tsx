@@ -1,12 +1,30 @@
+import { Order, OrderItem } from '@/types';
 import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
 import { StatusBadge, EmptyState } from '@/components/UI';
 import { ArrowRight, Clock, Check, Box, ChevronLeft, MapPin, Receipt } from 'lucide-react';
 
 export default function VendorOrderDetail() {
   const { orderId } = useParams();
-  const { orders, acceptOrder, markPreparing, markReady } = useOrder();
-  const order = orders.find(o => o.id === orderId);
+  const { orders, acceptOrder, markPreparing, markReady, isLoading, getOrderById } = useOrder();
+  const [fetchedOrder, setFetchedOrder] = useState<Order | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
+
+  const order = orders.find(o => o.id === orderId || o.orderNumber === orderId) || fetchedOrder;
+
+  useEffect(() => {
+    if (!order && orderId && !isFetching && getOrderById) {
+      setIsFetching(true);
+      getOrderById(orderId)
+        .then(res => {
+          if (res) setFetchedOrder(res);
+        })
+        .finally(() => {
+          setIsFetching(false);
+        });
+    }
+  }, [order, orderId, isFetching, getOrderById]);
 
   if (!order) {
     return (
@@ -62,7 +80,7 @@ export default function VendorOrderDetail() {
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--fb-text-muted)]">
             Kitchen Preparation Items
           </h4>
-          {order.items.map((item, idx) => (
+          {order.items.map((item: OrderItem, idx: number) => (
             <div
               key={idx}
               className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--fb-background)] border border-[var(--fb-border)]"
@@ -108,7 +126,7 @@ export default function VendorOrderDetail() {
           {order.status === 'PLACED' && (
             <button
               onClick={() => acceptOrder(order.id)}
-              className="w-full py-3.5 rounded-2xl font-bold text-xs bg-[#E8F5E9] hover:bg-[#E8F5E9] text-white shadow-soft flex items-center justify-center gap-2 transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-2xl font-bold text-xs bg-[var(--fb-success)] hover:brightness-110 text-white shadow-soft flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <Check className="h-4 w-4" /> Accept Order in Kitchen
             </button>
@@ -117,7 +135,7 @@ export default function VendorOrderDetail() {
           {order.status === 'ACCEPTED' && (
             <button
               onClick={() => markPreparing(order.id)}
-              className="w-full py-3.5 rounded-2xl font-bold text-xs bg-black hover:bg-black/80 text-white shadow-soft flex items-center justify-center gap-2 transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-2xl font-bold text-xs bg-[var(--fb-blue)] hover:bg-[var(--fb-blue-dark)] text-white shadow-soft flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <ArrowRight className="h-4 w-4" /> Start Preparing Items
             </button>
@@ -133,13 +151,13 @@ export default function VendorOrderDetail() {
           )}
 
           {order.status === 'READY_FOR_PICKUP' && (
-            <div className="p-3.5 text-center rounded-2xl bg-[var(--fb-warning)] text-[var(--fb-warning)] font-bold text-xs border border-[var(--fb-warning)]">
+            <div className="p-3.5 text-center rounded-2xl bg-[#FFF8E1] dark:bg-amber-950/40 text-[var(--fb-warning)] dark:text-amber-400 font-bold text-xs border border-[var(--fb-warning)]/30">
               Food is packed and ready! Waiting for campus rider pickup.
             </div>
           )}
 
           {order.status === 'PICKED_UP' && (
-            <div className="p-3.5 text-center rounded-2xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200">
+            <div className="p-3.5 text-center rounded-2xl bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] font-bold text-xs border border-[var(--fb-blue)]/30">
               Picked up by delivery partner.
             </div>
           )}
@@ -151,13 +169,13 @@ export default function VendorOrderDetail() {
           )}
 
           {order.status === 'DELIVERED' && (
-            <div className="p-3.5 text-center rounded-2xl bg-[#E8F5E9] text-[var(--fb-success)] font-bold text-xs border border-[var(--fb-success)]">
+            <div className="p-3.5 text-center rounded-2xl bg-[#E8F5E9] dark:bg-emerald-950/40 text-[var(--fb-success)] dark:text-emerald-400 font-bold text-xs border border-[var(--fb-success)]/30">
               Order successfully completed and delivered!
             </div>
           )}
 
           {order.status === 'CANCELLED' && (
-            <div className="p-3.5 text-center rounded-2xl bg-[#FFEBEE] text-[var(--fb-danger)] font-bold text-xs border border-[var(--fb-danger)]">
+            <div className="p-3.5 text-center rounded-2xl bg-[#FFEBEE] dark:bg-rose-950/40 text-[var(--fb-danger)] dark:text-rose-400 font-bold text-xs border border-[var(--fb-danger)]/30">
               Order was cancelled.
             </div>
           )}

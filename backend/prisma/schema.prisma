@@ -117,7 +117,7 @@ model VendorProfile {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   campus Campus @relation(fields: [campusId], references: [id], onDelete: Restrict)
-  store  Store?
+  stores Store[]
 
   @@index([campusId])
 }
@@ -171,9 +171,14 @@ model Address {
 
 model Store {
   id          String   @id @default(uuid())
-  vendorId    String   @unique
+  vendorId    String
   campusId    String
   name        String
+  categoryId  String
+  locationLabel String?
+  rating      Float    @default(0)
+  distanceFromCampus Int?
+  deliveryMinutes Int?
   description String?  @db.Text
   phone       String?
   address     String?
@@ -190,6 +195,7 @@ model Store {
   updatedAt   DateTime @updatedAt
 
   vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   campus   Campus        @relation(fields: [campusId], references: [id], onDelete: Restrict)
   products Product[]
   orders   Order[]
@@ -208,6 +214,7 @@ model Category {
   updatedAt DateTime @updatedAt
 
   products Product[]
+  stores   Store[]
 }
 
 model Product {
@@ -219,7 +226,9 @@ model Product {
   price         Decimal  @db.Decimal(10, 2)
   originalPrice Decimal? @db.Decimal(10, 2)
   imageUrl      String?  @db.VarChar(1000)
-  stockQuantity Int      @default(0)
+  stockQuantity      Int      @default(0)
+  lowStockThreshold  Int      @default(5)
+  trackInventory     Boolean  @default(true)
   isAvailable   Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -232,6 +241,7 @@ model Product {
   @@index([storeId])
   @@index([categoryId])
   @@index([isAvailable])
+  @@index([trackInventory])
 }
 
 model Cart {
@@ -273,6 +283,7 @@ model Order {
   paymentMethod     String
   paymentStatus     PaymentStatus @default(PENDING)
   orderStatus       OrderStatus   @default(PLACED)
+  stockRestored     Boolean       @default(false)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 

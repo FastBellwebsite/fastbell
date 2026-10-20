@@ -13,7 +13,8 @@ export default function Stores() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const campusId = user?.campusId || 'sns';
-  const categories = storage.getCategories();
+  const { categories: ctxCategories } = useStore();
+  const categories = ctxCategories && ctxCategories.length > 0 ? ctxCategories : storage.getCategories();
 
   const urlCategory = searchParams.get('category') || 'all';
   const urlOpenOnly = searchParams.get('open') === 'true';
@@ -30,16 +31,16 @@ export default function Stores() {
     if (urlOpenOnly !== openOnly) setOpenOnly(urlOpenOnly);
   }, [urlQ, urlCategory, urlOpenOnly]);
 
-  // Campus-scoped stores & Location-based 6 km radius selector
+  // Campus-scoped stores & Location-based 6 km radius selector with safe fallback
   const campusStores = useMemo(
-    () => stores.filter(s => s.campusId === campusId),
+    () => stores.filter(s => !s.campusId || s.campusId === campusId),
     [stores, campusId]
   );
 
-  const nearbyStores = useMemo(
-    () => getNearbyStores(user?.location, campusStores, 6),
-    [user?.location, campusStores]
-  );
+  const nearbyStores = useMemo(() => {
+    const nearby = getNearbyStores(user?.location, campusStores, 6);
+    return nearby.length > 0 ? nearby : campusStores;
+  }, [user?.location, campusStores]);
 
   const updateFilters = (newQ: string, newCat: string, newOpen: boolean) => {
     setSearchParams(prev => {
@@ -82,7 +83,12 @@ export default function Stores() {
   const filteredStores = useMemo(() => {
     const q = query.toLowerCase().trim();
     return nearbyStores.filter(s => {
-      const matchCat = categoryFilter === 'all' || s.category === categoryFilter;
+      const catLower = categoryFilter.toLowerCase();
+      const matchedCategory = categories.find(cat => cat.id.toLowerCase() === catLower || cat.slug.toLowerCase() === catLower || cat.name.toLowerCase() === catLower);
+      const validCatValues = new Set([catLower, matchedCategory?.id.toLowerCase(), matchedCategory?.slug.toLowerCase(), matchedCategory?.name.toLowerCase()].filter(Boolean));
+      const sCat = (s.category || '').toLowerCase();
+      const sCatId = ((s as any).categoryId || '').toLowerCase();
+      const matchCat = categoryFilter === 'all' || validCatValues.has(sCat) || validCatValues.has(sCatId);
       if (!matchCat) return false;
 
       if (openOnly && !s.isOpen) return false;

@@ -6,7 +6,7 @@ import StoreCard from '@/components/StoreCard';
 import { useStore } from '@/context/StoreContext';
 import { useAuth } from '@/context/AuthContext';
 import { useOrder } from '@/context/OrderContext';
-import { getPopularProducts } from '@/selectors/productSelectors';
+import { getPopularProducts, isProductInStock, isProductAvailable } from '@/selectors/productSelectors';
 import { getNearbyStores } from '@/utils/location';
 import { storage } from '@/services/storage';
 import { FastBellSelect } from '@/components/FastBellSelect';
@@ -22,38 +22,51 @@ const popularChips = [
 ];
 
 export default function Shop() {
-  const { products, stores } = useStore();
+  const { products, stores, refreshData } = useStore();
   const { user } = useAuth();
   const { orders } = useOrder();
-  const categories = storage.getCategories();
+  const { categories: ctxCategories } = useStore();
+  const categories = ctxCategories && ctxCategories.length > 0 ? ctxCategories : storage.getCategories();
   const [searchParams, setSearchParams] = useSearchParams();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    refreshData();
   }, []);
 
   const campusId = user?.campusId || 'sns';
 
-  // Campus scoping & Location-based 6 km service radius
+  // Campus scoping & Location-based 6 km service radius with safe fallback
   const campusStores = useMemo(
-    () => stores.filter(s => s.campusId === campusId),
+    () => stores.filter(s => !s.campusId || s.campusId === campusId),
     [stores, campusId]
   );
-  const nearbyStores = useMemo(
-    () => getNearbyStores(user?.location, campusStores, 6),
-    [user?.location, campusStores]
+  const campusStoreIds = useMemo(
+    () => new Set(campusStores.map(s => s.id)),
+    [campusStores]
   );
+  const nearbyStores = useMemo(() => {
+    const nearby = getNearbyStores(user?.location, campusStores, 6);
+    return nearby.length > 0 ? nearby : campusStores;
+  }, [user?.location, campusStores]);
+
   const nearbyStoreIds = useMemo(
     () => new Set(nearbyStores.map(s => s.id)),
     [nearbyStores]
   );
-  const campusProducts = useMemo(
-    () => products.filter(p => nearbyStoreIds.has(p.storeId)),
-    [products, nearbyStoreIds]
-  );
+  const campusProducts = useMemo(() => {
+    const list = products.filter(p => {
+      const matchStore = nearbyStoreIds.size > 0
+        ? nearbyStoreIds.has(p.storeId)
+        : (campusStoreIds.size > 0 ? campusStoreIds.has(p.storeId) : true);
+      const matchCampus = !p.campusId || p.campusId === campusId;
+      return matchStore && matchCampus;
+    });
+    return list.length > 0 ? list : products;
+  }, [products, nearbyStoreIds, campusStoreIds, campusId]);
 
-  const urlQ = searchParams.get('q') || '';
+  const urlQ = searchParams.get('q') || searchParams.get('search') || '';
   const urlCat = searchParams.get('category') || 'all';
   const urlScope = searchParams.get('scope') || '';
 
@@ -111,8 +124,24 @@ export default function Shop() {
   // Filter matching stores (scoped to nearby within service radius)
   const matchingStores = useMemo(() => {
     const q = query.toLowerCase().trim();
+    const catLower = activeCategory.toLowerCase();
+    const matchedCategory = categories.find(
+      c => c.id.toLowerCase() === catLower || c.slug.toLowerCase() === catLower || c.name.toLowerCase() === catLower
+    );
+    const validCatValues = new Set([
+      catLower,
+      matchedCategory?.id.toLowerCase(),
+      matchedCategory?.slug.toLowerCase(),
+      matchedCategory?.name.toLowerCase()
+    ].filter(Boolean));
+
     return nearbyStores.filter(s => {
-      const matchCat = activeCategory === 'all' || s.category === activeCategory;
+      const sCat = (s.category || '').toLowerCase();
+      const sCatId = ((s as any).categoryId || '').toLowerCase();
+      const matchCat =
+        activeCategory === 'all' ||
+        validCatValues.has(sCat) ||
+        validCatValues.has(sCatId);
       if (!matchCat) return false;
       if (!q) return true;
       return (
@@ -122,7 +151,7 @@ export default function Shop() {
         s.locationLabel.toLowerCase().includes(q)
       );
     });
-  }, [nearbyStores, query, activeCategory]);
+  }, [nearbyStores, query, activeCategory, categories]);
 
   // Popular products map for sorting
   const popularRankMap = useMemo(() => {
@@ -135,24 +164,45 @@ export default function Shop() {
   // Filter matching products (scoped to campus)
   const matchingProducts = useMemo(() => {
     const q = query.toLowerCase().trim();
+    const catLower = activeCategory.toLowerCase();
+    const matchedCategory = categories.find(
+      c => c.id.toLowerCase() === catLower || c.slug.toLowerCase() === catLower || c.name.toLowerCase() === catLower
+    );
+    const validCatValues = new Set([
+      catLower,
+      matchedCategory?.id.toLowerCase(),
+      matchedCategory?.slug.toLowerCase(),
+      matchedCategory?.name.toLowerCase()
+    ].filter(Boolean));
+
     let result = campusProducts.filter(p => {
       const storeObj = campusStores.find(s => s.id === p.storeId);
       const storeName = storeObj?.name.toLowerCase() || '';
+      const pCat = (p.category || '').toLowerCase();
+      const pCatId = (p.categoryId || (p as any).categoryId || '').toLowerCase();
 
       const matchCat =
         activeCategory === 'all' ||
-        p.category === activeCategory ||
-        (p as any).categoryId === activeCategory;
+        validCatValues.has(pCat) ||
+        validCatValues.has(pCatId);
       if (!matchCat) return false;
 
-      if (inStockOnly && !p.isAvailable) return false;
+      if (inStockOnly && !isProductInStock(p)) return false;
 
       if (!q) return true;
-      return (
+      const terms = q.split(/\s+/).filter(Boolean);
+      const matchesPhrase =
         p.name.toLowerCase().includes(q) ||
         p.description?.toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q) ||
-        storeName.includes(q)
+        storeName.includes(q);
+      if (matchesPhrase) return true;
+
+      return terms.length > 1 && terms.every(t =>
+        p.name.toLowerCase().includes(t) ||
+        p.description?.toLowerCase().includes(t) ||
+        p.category.toLowerCase().includes(t) ||
+        storeName.includes(t)
       );
     });
 
@@ -169,15 +219,17 @@ export default function Shop() {
       result = [...result].sort((a, b) => b.price - a.price);
     }
 
-    // Secondary rule: In full listing, available items always rank higher than out-of-stock items
+    // Secondary rule: In full listing, available in-stock items always rank higher than out-of-stock items
     result = [...result].sort((a, b) => {
-      if (a.isAvailable && !b.isAvailable) return -1;
-      if (!a.isAvailable && b.isAvailable) return 1;
+      const availA = isProductAvailable(a);
+      const availB = isProductAvailable(b);
+      if (availA && !availB) return -1;
+      if (!availA && availB) return 1;
       return 0;
     });
 
     return result;
-  }, [campusProducts, campusStores, query, activeCategory, inStockOnly, sort, popularRankMap]);
+  }, [campusProducts, campusStores, query, activeCategory, inStockOnly, sort, popularRankMap, categories]);
 
   const hasActiveFilters =
     query.trim() !== '' ||

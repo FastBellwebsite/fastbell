@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Package, RotateCcw, ArrowRight, Store, Clock } from 'lucide-react';
+import { Package, RotateCcw, ArrowRight, Store, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { useOrder } from '@/context/OrderContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 
 export default function Orders() {
   const { user } = useAuth();
-  const { orders } = useOrder();
+  const { orders, isLoading, error, refreshOrders } = useOrder();
   const { stores } = useStore();
   const { addToCart, clearCart } = useCart();
 
@@ -27,6 +27,48 @@ export default function Orders() {
     });
     toast.success('Items added to cart');
   };
+
+
+  if (isLoading && myOrders.length === 0) {
+    return (
+      <div className="min-h-[50vh] bg-[var(--fb-bg)] flex flex-col items-center justify-center font-sans px-4 py-12">
+        <div className="w-full max-w-md mx-auto text-center border border-[var(--fb-border)] bg-[var(--fb-surface)] p-8 sm:p-10 rounded-2xl shadow-sm">
+          <div className="w-10 h-10 border-3 border-[var(--fb-border)] border-t-[var(--fb-blue)] rounded-full animate-spin mx-auto mb-4" />
+          <h2 className="font-display text-lg font-bold text-[var(--fb-ink)] tracking-tight">
+            Loading your orders...
+          </h2>
+          <p className="text-xs sm:text-sm text-[var(--fb-text-secondary)] mt-1 font-normal">
+            Fetching recent campus deliveries from backend
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+
+  if (error && myOrders.length === 0 && !isLoading) {
+    return (
+      <div className="min-h-[50vh] bg-[var(--fb-bg)] flex flex-col items-center justify-center font-sans px-4 py-12">
+        <div className="w-full max-w-md mx-auto text-center border border-red-200 bg-[var(--fb-surface)] p-8 sm:p-10 rounded-2xl shadow-sm">
+          <div className="h-12 w-12 bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 rounded-xl border border-red-200">
+            <AlertCircle size={24} />
+          </div>
+          <h2 className="font-display text-lg font-bold text-[var(--fb-ink)] tracking-tight">
+            Failed to Load Orders
+          </h2>
+          <p className="text-xs sm:text-sm text-[var(--fb-text-secondary)] mt-1 mb-6 font-normal">
+            {error}
+          </p>
+          <button
+            onClick={() => refreshOrders()}
+            className="inline-flex items-center gap-2 btn-action-primary px-5 py-2.5 text-xs font-bold"
+          >
+            <RefreshCw size={14} /> Retry Loading
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -69,6 +111,22 @@ export default function Orders() {
             {myOrders.length} {myOrders.length === 1 ? 'order' : 'orders'} on record
           </span>
         </div>
+
+
+        {error && myOrders.length > 0 && (
+          <div className="mb-6 p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-center justify-between text-xs text-amber-900 font-medium">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="text-amber-600 shrink-0" />
+              <span>Could not refresh recent orders: {error}. Showing current session data.</span>
+            </div>
+            <button
+              onClick={() => refreshOrders()}
+              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-amber-200 hover:bg-amber-300 rounded-md transition-colors"
+            >
+              <RefreshCw size={12} /> Retry
+            </button>
+          </div>
+        )}
 
         {myOrders.length === 0 ? (
           <div className="space-y-8 max-w-4xl">
@@ -142,7 +200,7 @@ export default function Orders() {
 
                 <div className="flex flex-col gap-4">
                   {active.map(o => {
-                    const store = stores.find(s => s.id === o.storeId);
+                    const store = stores.find(s => s.id === o.storeId) || o.store;
                     return (
                       <div
                         key={o.id}
@@ -151,9 +209,14 @@ export default function Orders() {
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-display text-[11px] font-bold text-[var(--fb-blue)] uppercase tracking-wider bg-[var(--fb-blue-soft)] px-2 py-0.5 border border-[var(--fb-blue)]/20 rounded-sm">
-                              #{o.id}
+                              #{o.orderNumber || o.id}
                             </span>
                             <StatusBadge status={o.status} />
+                            {o.status === 'PLACED' && (
+                              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 px-2 py-0.5 rounded">
+                                Cancellable (5m window)
+                              </span>
+                            )}
                             <span className="text-[11px] font-medium text-[var(--fb-text-muted)]">
                               {new Date(o.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -205,7 +268,7 @@ export default function Orders() {
 
                 <div className="bg-[var(--fb-surface)] border border-[var(--fb-border)] divide-y divide-[var(--fb-border)] shadow-sm">
                   {past.map(o => {
-                    const store = stores.find(s => s.id === o.storeId);
+                    const store = stores.find(s => s.id === o.storeId) || o.store;
                     return (
                       <div
                         key={o.id}
@@ -214,7 +277,7 @@ export default function Orders() {
                         <div className="space-y-3">
                           <div className="flex flex-wrap items-center gap-3">
                             <span className="font-mono text-xs font-bold text-[var(--fb-text-secondary)] uppercase tracking-wider">
-                              #{o.id}
+                              #{o.orderNumber || o.id}
                             </span>
                             <StatusBadge status={o.status} />
                             <span className="text-xs font-medium text-[var(--fb-text-muted)]">

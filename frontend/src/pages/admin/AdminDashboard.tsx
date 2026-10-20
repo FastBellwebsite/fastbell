@@ -1,7 +1,9 @@
 import { Users, Package, IndianRupee, TrendingUp, Activity, ArrowRight, ScanLine } from 'lucide-react';
 import { useOrder } from '@/context/OrderContext';
 import { useStore } from '@/context/StoreContext';
-import { storage } from '@/services/storage';
+import { api } from '@/services/api';
+import { useState, useEffect } from 'react';
+import { User } from '@/types';
 import { getAdminMetrics } from '@/selectors/adminSelectors';
 import { StatusBadge } from '@/components/UI';
 import { Link } from 'react-router-dom';
@@ -9,7 +11,19 @@ import { Link } from 'react-router-dom';
 export default function AdminDashboard() {
   const { orders } = useOrder();
   const { stores, products } = useStore();
-  const users = storage.getUsers();
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getUsers().then(res => {
+      if (isMounted && res && res.success && Array.isArray(res.data)) {
+        setUsers(res.data);
+      }
+    }).catch(() => {
+      // Graceful error handling
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const metrics = getAdminMetrics(orders, stores, products, users);
 
@@ -70,7 +84,7 @@ export default function AdminDashboard() {
 
         <div className="w-full overflow-x-auto border border-[var(--fb-border)] bg-[var(--fb-surface)]">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-[#fcfcfc] dark:bg-black/20 border-b border-[var(--fb-border)]">
+            <thead className="bg-[var(--fb-bg)] border-b border-[var(--fb-border)]">
               <tr>
                 <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)]">Order ID</th>
                 <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-[var(--fb-text-muted)]">Store</th>

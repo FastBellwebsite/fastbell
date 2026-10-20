@@ -1,20 +1,19 @@
 const prisma = require('../utils/prisma');
 
 const DELIVERY_STATUSES = [
-  'PENDING',
-  'PREPARING',
+  'UNASSIGNED',
+  'ASSIGNED',
+  'PICKED_UP',
   'OUT_FOR_DELIVERY',
   'DELIVERED',
-  'CANCELLED',
 ];
-const DELIVERABLE_ORDER_STATUS = 'PENDING';
-const REQUIRED_PAYMENT_STATUS = 'SUCCESS';
+const DELIVERABLE_ORDER_STATUSES = ['PLACED', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP'];
 const DELIVERY_TRANSITIONS = {
-  PENDING: ['PREPARING', 'CANCELLED'],
-  PREPARING: ['OUT_FOR_DELIVERY', 'CANCELLED'],
-  OUT_FOR_DELIVERY: ['DELIVERED', 'CANCELLED'],
+  UNASSIGNED: ['ASSIGNED'],
+  ASSIGNED: ['PICKED_UP'],
+  PICKED_UP: ['OUT_FOR_DELIVERY'],
+  OUT_FOR_DELIVERY: ['DELIVERED'],
   DELIVERED: [],
-  CANCELLED: [],
 };
 
 const createHttpError = (statusCode, message) => {
@@ -26,7 +25,11 @@ const createHttpError = (statusCode, message) => {
 const formatDelivery = (delivery) => ({
   id: delivery.id,
   orderId: delivery.orderId,
+  deliveryPartnerId: delivery.deliveryPartnerId,
   status: delivery.status,
+  pickupTime: delivery.pickupTime,
+  deliveredTime: delivery.deliveredTime,
+  proofImageUrl: delivery.proofImageUrl,
   createdAt: delivery.createdAt,
   updatedAt: delivery.updatedAt,
 });
@@ -59,7 +62,7 @@ const createDelivery = async (req, res, next) => {
       const order = await tx.order.findFirst({
         where: {
           id: orderId.trim(),
-          userId: req.user.id,
+          studentId: req.user.id,
         },
         include: {
           payment: true,
@@ -71,12 +74,8 @@ const createDelivery = async (req, res, next) => {
         throw createHttpError(404, 'Order not found');
       }
 
-      if (order.status !== DELIVERABLE_ORDER_STATUS) {
+      if (!DELIVERABLE_ORDER_STATUSES.includes(order.orderStatus)) {
         throw createHttpError(400, 'Order is not eligible for delivery');
-      }
-
-      if (!order.payment || order.payment.status !== REQUIRED_PAYMENT_STATUS) {
-        throw createHttpError(400, 'Successful payment is required before delivery');
       }
 
       if (order.delivery) {
@@ -86,7 +85,7 @@ const createDelivery = async (req, res, next) => {
       const delivery = await tx.delivery.create({
         data: {
           orderId: order.id,
-          status: 'PENDING',
+          status: 'UNASSIGNED',
         },
       });
 
@@ -111,7 +110,7 @@ const getDeliveryById = async (req, res, next) => {
       where: {
         id,
         order: {
-          userId: req.user.id,
+          studentId: req.user.id,
         },
       },
     });
@@ -139,7 +138,7 @@ const getDeliveryByOrderId = async (req, res, next) => {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: req.user.id,
+        studentId: req.user.id,
       },
       include: {
         delivery: true,
@@ -177,9 +176,9 @@ const updateDeliveryStatus = async (req, res, next) => {
     const delivery = await prisma.delivery.findFirst({
       where: {
         id,
-        order: {
-          userId: req.user.id,
-        },
+      },
+      include: {
+        order: true,
       },
     });
 
@@ -190,6 +189,27 @@ const updateDeliveryStatus = async (req, res, next) => {
       });
     }
 
+    if (delivery.order.studentId !== req.user.id && delivery.deliveryPartnerId !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to update this delivery',
+      });
+    }
+
+    if (req.user.role === 'DELIVERY_PARTNER') {
+      const partnerProfile = await prisma.deliveryPartnerProfile.findUnique({
+        where: { userId: req.user.id },
+        select: { verificationStatus: true },
+      });
+
+      if (!partnerProfile || partnerProfile.verificationStatus !== 'APPROVED') {
+        return res.status(403).json({
+          success: false,
+          message: 'Delivery partner account is not approved. Access to delivery orders is restricted.',
+        });
+      }
+    }
+
     const allowedNextStatuses = DELIVERY_TRANSITIONS[delivery.status] || [];
     if (!allowedNextStatuses.includes(nextStatus)) {
       return res.status(400).json({
@@ -198,9 +218,17 @@ const updateDeliveryStatus = async (req, res, next) => {
       });
     }
 
+    const updateData = { status: nextStatus };
+    if (nextStatus === 'PICKED_UP' && !delivery.pickupTime) {
+      updateData.pickupTime = new Date();
+    }
+    if (nextStatus === 'DELIVERED' && !delivery.deliveredTime) {
+      updateData.deliveredTime = new Date();
+    }
+
     const updatedDelivery = await prisma.delivery.update({
       where: { id: delivery.id },
-      data: { status: nextStatus },
+      data: updateData,
     });
 
     return res.status(200).json({
@@ -213,9 +241,183 @@ const updateDeliveryStatus = async (req, res, next) => {
   }
 };
 
+
+const getDeliveryPartners = async (req, res, next) => {
+  try {
+    const { status, campusId } = req.query;
+
+    const where = {};
+    if (status && ['PENDING', 'APPROVED', 'REJECTED'].includes(status.trim().toUpperCase())) {
+      where.verificationStatus = status.trim().toUpperCase();
+    }
+    if (campusId) {
+      where.campusId = campusId.trim();
+    }
+
+    const profiles = await prisma.deliveryPartnerProfile.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            isActive: true,
+            createdAt: true,
+          },
+        },
+        campus: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const formatted = profiles.map((p) => ({
+      id: p.id,
+      userId: p.user?.id,
+      name: p.user?.name || 'Unknown',
+      email: p.user?.email || '',
+      phone: p.user?.phone || null,
+      isActive: p.user?.isActive ?? true,
+      campusId: p.campusId,
+      campusName: p.campus?.name || p.campusId,
+      collegeId: p.collegeId,
+      vehicleType: p.vehicleType,
+      vehicleNumber: p.vehicleNumber,
+      serviceArea: p.serviceArea,
+      baseAddress: p.baseAddress,
+      availabilityStatus: p.availabilityStatus,
+      verificationStatus: p.verificationStatus,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formatted,
+      count: formatted.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateDeliveryPartnerVerification = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || typeof status !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification status is required.',
+      });
+    }
+
+    if (!['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification status. Status must be either APPROVED or REJECTED.',
+      });
+    }
+
+    const existingProfile = await prisma.deliveryPartnerProfile.findFirst({
+      where: {
+        OR: [{ id }, { userId: id }],
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            isActive: true,
+          },
+        },
+        campus: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
+    });
+
+    if (!existingProfile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery partner profile not found.',
+      });
+    }
+
+    const updatedProfile = await prisma.deliveryPartnerProfile.update({
+      where: { id: existingProfile.id },
+      data: {
+        verificationStatus: status,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            isActive: true,
+          },
+        },
+        campus: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Delivery partner verification status updated to ${status}.`,
+      data: {
+        id: updatedProfile.id,
+        userId: updatedProfile.user?.id,
+        name: updatedProfile.user?.name,
+        email: updatedProfile.user?.email,
+        phone: updatedProfile.user?.phone,
+        isActive: updatedProfile.user?.isActive,
+        campusId: updatedProfile.campusId,
+        campusName: updatedProfile.campus?.name,
+        collegeId: updatedProfile.collegeId,
+        vehicleType: updatedProfile.vehicleType,
+        vehicleNumber: updatedProfile.vehicleNumber,
+        serviceArea: updatedProfile.serviceArea,
+        baseAddress: updatedProfile.baseAddress,
+        availabilityStatus: updatedProfile.availabilityStatus,
+        verificationStatus: updatedProfile.verificationStatus,
+        createdAt: updatedProfile.createdAt,
+        updatedAt: updatedProfile.updatedAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createDelivery,
   getDeliveryById,
   getDeliveryByOrderId,
   updateDeliveryStatus,
+  getDeliveryPartners,
+  updateDeliveryPartnerVerification,
 };

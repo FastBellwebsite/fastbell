@@ -55,3 +55,9 @@ Thumbs.db
 # Development screenshots & ad-hoc test scripts
 *.png
 *.cjs
+
+*.tsbuildinfo
+*.before-*
+*.before-backend.*
+npm
+/npm

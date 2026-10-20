@@ -1,4 +1,5 @@
 import { Order, Store, Product, User } from '../types';
+import { isProductAvailable, isProductOutOfStock } from './productSelectors';
 
 export interface AdminMetrics {
   totalUsers: number;
@@ -9,6 +10,7 @@ export interface AdminMetrics {
   activeStores: number;
   totalProducts: number;
   availableProducts: number;
+  outOfStockProducts: number;
   totalOrders: number;
   liveOrders: number;
   completedOrders: number;
@@ -27,7 +29,8 @@ export const getAdminMetrics = (
   const delivery = users.filter(u => u.role === 'delivery');
 
   const openStores = stores.filter(s => s.isOpen);
-  const availableProducts = products.filter(p => p.isAvailable);
+  const availableProducts = products.filter(isProductAvailable);
+  const outOfStockProducts = products.filter(isProductOutOfStock);
 
   const completed = orders.filter(o => o.status === 'DELIVERED');
   const cancelled = orders.filter(o => o.status === 'CANCELLED');
@@ -46,6 +49,7 @@ export const getAdminMetrics = (
     activeStores: openStores.length,
     totalProducts: products.length,
     availableProducts: availableProducts.length,
+    outOfStockProducts: outOfStockProducts.length,
     totalOrders: orders.length,
     liveOrders: live.length,
     completedOrders: completed.length,

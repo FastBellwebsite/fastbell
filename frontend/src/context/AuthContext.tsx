@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Role } from '@/types';
 import { api, authToken } from '@/services/api';
+import { storage } from '@/services/storage';
 import { mockUserService } from '@/services/mockUserService';
 import toast from 'react-hot-toast';
 
@@ -14,114 +15,93 @@ type AuthContextValue = {
   register: (userData: User) => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const mapApiUserToFrontendUser = (apiUser: any): User => {
+  const normalizedRole = (
+    apiUser.role === 'DELIVERY_PARTNER'
+      ? 'delivery'
+      : String(apiUser.role || '').toLowerCase()
+  ) as Role;
+
   const base = {
     id: apiUser.id,
     name: apiUser.name,
     email: apiUser.email,
     phone: apiUser.phone || '',
-    role: apiUser.role as Role,
-    campusId: apiUser.campusId || 'sns',
-    status: apiUser.status || 'Active',
+    role: normalizedRole,
+    campusId: apiUser.campusId || apiUser.campus?.id || 'sns',
+    status: apiUser.status || (apiUser.isActive ? 'Active' : 'Suspended'),
     addresses: apiUser.addresses || [],
   };
 
-  if (apiUser.role === 'student') {
+  if (normalizedRole === 'student') {
     return {
       ...base,
       role: 'student',
-      department: apiUser.department,
-      year: apiUser.year,
+      department: apiUser.department || apiUser.studentProfile?.department,
+      year: apiUser.year || apiUser.studentProfile?.year,
       addresses: apiUser.addresses || [],
       location: apiUser.location,
       favorites: [],
     } as User;
   }
 
-  if (apiUser.role === 'vendor') {
+  if (normalizedRole === 'vendor') {
     return {
       ...base,
       role: 'vendor',
-      storeId: apiUser.storeId || '',
-      storeName: apiUser.storeName,
+      storeId: apiUser.storeId || apiUser.vendorProfile?.stores?.[0]?.id || '',
+      storeName: apiUser.storeName || apiUser.vendorProfile?.stores?.[0]?.name,
+      storeIds: apiUser.storeIds || (apiUser.storeId ? [apiUser.storeId] : (apiUser.vendorProfile?.stores?.map((s: any) => s.id) || [])),
+      vendorProfileId: apiUser.vendorProfileId || apiUser.vendorProfile?.id,
       businessName: apiUser.businessName,
       category: apiUser.category,
       description: apiUser.description,
-      location: apiUser.location,
+      isStoreOpen: true,
+      favorites: [],
     } as User;
   }
 
-  if (apiUser.role === 'delivery') {
+  if (normalizedRole === 'delivery') {
     return {
       ...base,
       role: 'delivery',
-      serviceArea: apiUser.serviceArea,
-      vehicleType: apiUser.vehicleType,
+      isAvailable: true,
+      vehicleType: apiUser.vehicleType || 'Bike',
       vehicleNumber: apiUser.vehicleNumber,
-      availabilityStatus: apiUser.availabilityStatus || 'Offline',
-      location: apiUser.location,
+      verificationStatus: apiUser.verificationStatus || 'APPROVED',
+      activeOrderId: null,
+      completedOrdersCount: 0,
+      rating: 5.0,
+      totalEarnings: 0,
     } as User;
   }
 
   return {
     ...base,
     role: 'admin',
-    permissions: apiUser.permissions || [],
+    permissions: ['all'],
   } as User;
 };
 
-const buildRegisterPayload = (userData: User) => {
+const buildRegisterPayload = (userData: User): Record<string, unknown> => {
   const payload: Record<string, unknown> = {
     name: userData.name,
     email: userData.email,
+    password: userData.password || 'password123',
     phone: userData.phone,
-    password: userData.password,
     role: userData.role,
-    campusId: userData.campusId || 'sns',
+    campusId: userData.campusId,
   };
-
   if (userData.role === 'student') {
-    payload.department = userData.department;
-    payload.year = userData.year;
-
-    const address = userData.addresses?.[0];
-
-    payload.address = address?.line || userData.deliveryLocation;
-    payload.locality = address?.locality || userData.location?.locality;
-    payload.city = address?.city || userData.location?.city;
-    payload.state = address?.state || userData.location?.state;
-    payload.postalCode = address?.postalCode || userData.location?.postalCode;
-    payload.landmark = address?.landmark;
+    const student = userData as any;
+    if (student.department) payload.department = student.department;
+    if (student.year) payload.year = student.year;
   }
-
-  if (userData.role === 'vendor') {
-    payload.storeName = userData.storeName || userData.businessName;
-    payload.category = userData.category;
-    payload.description = userData.description;
-
-    payload.address = userData.location?.address;
-    payload.locality = userData.location?.locality;
-    payload.city = userData.location?.city;
-    payload.state = userData.location?.state;
-    payload.postalCode = userData.location?.postalCode;
-  }
-
-  if (userData.role === 'delivery') {
-    payload.serviceArea = userData.serviceArea;
-    payload.vehicleType = userData.vehicleType;
-    payload.vehicleNumber = userData.vehicleNumber;
-
-    payload.address = userData.location?.address;
-    payload.locality = userData.location?.locality;
-    payload.city = userData.location?.city;
-    payload.state = userData.location?.state;
-    payload.postalCode = userData.location?.postalCode;
-  }
-
   return payload;
 };
 
@@ -159,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, pass: string, selectedRole: Role) => {
     try {
+      authToken.clear();
       const response = await api.login(email, pass, selectedRole);
       authToken.set(response.token);
 
@@ -190,18 +171,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProfile = async (updates: Partial<User>) => {
-    if (!user) return;
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
 
     try {
-      const updated = mockUserService.updateUserProfile(user.id, updates);
+      const response = await api.updateProfile(updates);
+      const updatedUser = response?.data || response?.user;
 
-      if (updated) {
-        setUser(updated);
-        toast.success('Profile updated successfully');
+      if (updatedUser) {
+        setUser(mapApiUserToFrontendUser(updatedUser));
+      } else {
+        await refreshUser();
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile');
       throw error;
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await api.me();
+      if (response && response.user) {
+        setUser(mapApiUserToFrontendUser(response.user));
+      }
+    } catch (err) {
+      console.error('Failed to refresh user', err);
     }
   };
 
@@ -223,8 +219,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         updateProfile,
         logout,
-      }}
-    >
+        refreshUser,
+      }}>
       {children}
     </AuthContext.Provider>
   );

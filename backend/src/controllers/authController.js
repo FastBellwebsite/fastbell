@@ -26,27 +26,46 @@ const buildUserResponse = (user) => {
 
   if (user.role === 'STUDENT') {
     const profile = user.studentProfile;
+    const defaultAddress =
+      user.addresses?.find((item) => item.isDefault) ||
+      user.addresses?.[0];
 
     return {
       ...base,
       campusId: profile?.campusId || null,
       department: profile?.department || undefined,
       year: profile?.year || undefined,
-      addresses: user.addresses || []
+      addresses: user.addresses || [],
+      location:
+        defaultAddress?.latitude != null &&
+        defaultAddress?.longitude != null
+          ? {
+              latitude: defaultAddress.latitude,
+              longitude: defaultAddress.longitude,
+              address: defaultAddress.addressLine || undefined,
+              locality: defaultAddress.locality || undefined,
+              city: defaultAddress.city || undefined,
+              state: defaultAddress.state || undefined,
+              postalCode: defaultAddress.postalCode || undefined
+            }
+          : undefined
     };
   }
 
   if (user.role === 'VENDOR') {
     const profile = user.vendorProfile;
-    const store = profile?.store;
+    const store = profile?.stores?.[0];
+    const storeIds = profile?.stores?.map((s) => s.id) || [];
 
     return {
       ...base,
       campusId: profile?.campusId || null,
       storeId: store?.id || null,
+      storeIds,
+      vendorProfileId: profile?.id || null,
       storeName: store?.name || undefined,
       businessName: store?.name || undefined,
-      category: store?.products?.[0]?.category?.slug || undefined,
+      category: store?.category?.slug || undefined,
       description: store?.description || undefined,
       location: store
         ? {
@@ -84,16 +103,6 @@ const buildUserResponse = (user) => {
               address: profile.baseAddress || undefined,
               locality: profile.serviceArea || undefined
             }
-          : profile?.baseAddress
-          ? {
-              latitude: 11.1271,
-              longitude: 76.9966,
-              address: profile.baseAddress,
-              locality: profile.serviceArea || undefined,
-              city: 'Coimbatore',
-              state: 'Tamil Nadu',
-              postalCode: '641049'
-            }
           : undefined
     };
   }
@@ -108,8 +117,9 @@ const userInclude = {
   studentProfile: true,
   vendorProfile: {
     include: {
-      store: {
+      stores: {
         include: {
+          category: true,
           products: {
             include: {
               category: true
@@ -144,10 +154,15 @@ const register = async (req, res, next) => {
       storeName,
       category,
       description,
+      locationLabel,
+      deliveryMinutes,
+      imageUrl,
       vehicleType,
       vehicleNumber,
       serviceArea,
-      studentId
+      studentId,
+      latitude,
+      longitude
     } = req.body;
 
     if (!name || name.trim().length < 2) {
@@ -173,7 +188,7 @@ const register = async (req, res, next) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const normalizedRole = ROLE_MAP[role?.toLowerCase()];
+    const normalizedRole = ROLE_MAP[(role || 'student').toLowerCase()];
 
     if (!normalizedRole) {
       return res.status(400).json({
@@ -215,6 +230,42 @@ const register = async (req, res, next) => {
       });
     }
 
+    const parsedLatitude =
+      latitude !== undefined &&
+      latitude !== null &&
+      latitude !== ''
+        ? Number(latitude)
+        : null;
+
+    const parsedLongitude =
+      longitude !== undefined &&
+      longitude !== null &&
+      longitude !== ''
+        ? Number(longitude)
+        : null;
+
+    if (
+      (parsedLatitude !== null && !Number.isFinite(parsedLatitude)) ||
+      (parsedLongitude !== null && !Number.isFinite(parsedLongitude))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid location coordinates.'
+      });
+    }
+
+    if (
+      (parsedLatitude !== null &&
+        (parsedLatitude < -90 || parsedLatitude > 90)) ||
+      (parsedLongitude !== null &&
+        (parsedLongitude < -180 || parsedLongitude > 180))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Location coordinates are out of range.'
+      });
+    }
+
     const passwordHash = await hashPassword(password);
 
     const user = await prisma.$transaction(async (tx) => {
@@ -249,8 +300,8 @@ const register = async (req, res, next) => {
               state: state?.trim() || 'Tamil Nadu',
               postalCode: postalCode?.trim() || null,
               landmark: landmark?.trim() || null,
-              latitude: 11.1271,
-              longitude: 76.9966,
+              latitude: parsedLatitude,
+              longitude: parsedLongitude,
               isDefault: true
             }
           });
@@ -266,6 +317,20 @@ const register = async (req, res, next) => {
           throw new Error('Store category is required for vendor registration.');
         }
 
+        const categoryRecord = await tx.category.findFirst({
+          where: {
+            OR: [
+              { id: category.trim() },
+              { slug: category.trim().toLowerCase() }
+            ],
+            isActive: true
+          }
+        });
+
+        if (!categoryRecord) {
+          throw new Error('Invalid store category.');
+        }
+
         const vendorProfile = await tx.vendorProfile.create({
           data: {
             userId: createdUser.id,
@@ -279,14 +344,18 @@ const register = async (req, res, next) => {
             vendorId: vendorProfile.id,
             campusId: campus.id,
             name: storeName.trim(),
+            categoryId: categoryRecord.id,
             description: description?.trim() || null,
+      locationLabel: locationLabel?.trim() || null,
+      deliveryMinutes: deliveryMinutes ? Number(deliveryMinutes) : 15,
+      imageUrl: imageUrl?.trim() || null,
             address: address?.trim() || null,
             locality: locality?.trim() || null,
             city: city?.trim() || 'Coimbatore',
             state: state?.trim() || 'Tamil Nadu',
             postalCode: postalCode?.trim() || null,
-            latitude: 11.1271,
-            longitude: 76.9966,
+            latitude: parsedLatitude,
+            longitude: parsedLongitude,
             isOpen: true,
             isActive: true
           }
@@ -304,8 +373,8 @@ const register = async (req, res, next) => {
             serviceArea: serviceArea?.trim() || null,
             baseAddress: address?.trim() || null,
             availabilityStatus: 'OFFLINE',
-            currentLatitude: 11.1271,
-            currentLongitude: 76.9966,
+            currentLatitude: parsedLatitude,
+            currentLongitude: parsedLongitude,
             verificationStatus: 'PENDING'
           }
         });

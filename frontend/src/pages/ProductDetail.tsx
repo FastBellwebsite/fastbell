@@ -9,13 +9,14 @@ import StoreConflictModal from '@/components/StoreConflictModal';
 export default function ProductDetail() {
   const { productId } = useParams();
   const navigate = useNavigate();
-  const { products, stores, toggleFavorite, favorites } = useStore();
+  const { products, stores, toggleFavorite, favorites, refreshData } = useStore();
   const { cart, addToCart, replaceCartAndAdd, updateQuantity } = useCart();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    refreshData();
+  }, [productId]);
 
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
   const [conflictStoreName, setConflictStoreName] = useState('');
@@ -99,7 +100,7 @@ export default function ProductDetail() {
 
               {/* Discount Tag */}
               {product.originalPrice && product.originalPrice > product.price && (
-                <span className="absolute top-6 left-6 bg-[var(--fb-ink)] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-white rounded-lg shadow-md">
+                <span className="absolute top-6 left-6 bg-[var(--fb-ink)] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-[var(--fb-surface)] dark:bg-[var(--fb-blue)] dark:text-white rounded-lg shadow-md">
                   Save ₹{product.originalPrice - product.price}
                 </span>
               )}
@@ -155,7 +156,7 @@ export default function ProductDetail() {
             </div>
 
             {/* Quantity & CTA Buttons */}
-            {product.isAvailable ? (
+            {product.isAvailable && (product.trackInventory === false || Number(product.stockQuantity ?? 0) > 0) ? (
               <div className="w-full max-w-sm">
                 {quantity > 0 ? (
                   <div className="flex items-center h-14 sm:h-16 bg-[var(--fb-blue)] text-white w-full rounded-xl shadow-lg">
@@ -186,8 +187,12 @@ export default function ProductDetail() {
                   </button>
                 )}
               </div>
+            ) : !product.isAvailable ? (
+              <div className="p-4 sm:p-5 bg-[var(--fb-surface)] border border-[var(--fb-border)] text-[var(--fb-text-muted)] text-center font-bold tracking-wider text-sm uppercase w-full max-w-sm rounded-xl">
+                Currently Unavailable
+              </div>
             ) : (
-              <div className="p-4 sm:p-5 bg-[var(--fb-surface)] border border-[var(--fb-border)] text-[var(--fb-text-secondary)] text-center font-bold tracking-wider text-sm uppercase w-full max-w-sm rounded-xl">
+              <div className="p-4 sm:p-5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 text-center font-bold tracking-wider text-sm uppercase w-full max-w-sm rounded-xl">
                 Out of Stock
               </div>
             )}

@@ -4,13 +4,15 @@ import { MapPin, Wallet, Banknote, CreditCard, Check, ShoppingBag, ArrowLeft, Sh
 import { useCart } from '@/context/CartContext';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/services/api';
+import toast from 'react-hot-toast';
 import { calcOrderTotals } from '@/utils/order';
 import { Address, Order, OrderItem, StudentProfile } from '@/types';
 
 export default function Checkout() {
   const { populatedCart, clearCart, cartTotal, isValidForCheckout } = useCart();
   const { createOrder } = useOrder();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const userAddresses: Address[] = (user as StudentProfile)?.addresses || [];
@@ -94,48 +96,62 @@ export default function Checkout() {
           landmark: 'SNS Campus'
         });
 
-  const submit = () => {
+  const submit = async () => {
     if (!populatedCart.length || !user || isPlacing) return;
     setIsPlacing(true);
-    const totals = calcOrderTotals(cartTotal);
 
-    // Exact historical price snapshot
-    const snapshotItems: OrderItem[] = populatedCart.map(pc => ({
-      productId: pc.item.productId,
-      name: pc.product!.name,
-      quantity: pc.item.quantity,
-      unitPrice: pc.product!.price,
-      subtotal: pc.item.quantity * pc.product!.price
-    }));
+    try {
+      const totals = calcOrderTotals(cartTotal);
+      let effectiveAddressId = addressId;
 
-    const orderId = `FB-${Math.floor(100000 + Math.random() * 899999)}`;
-    const studentId = user.id;
-    const storeId = populatedCart[0].item.storeId;
-    const campusId = user.campusId || 'sns';
+      const trimmedCustom = customAddress.trim();
+      const selectedExisting = availableAddresses.find(a => a.id === addressId);
+      const isTemporaryId =
+        !effectiveAddressId ||
+        effectiveAddressId.startsWith('temp-') ||
+        effectiveAddressId.startsWith('addr-');
 
-    const order: Order = {
-      id: orderId,
-      campusId,
-      studentId,
-      storeId,
-      deliveryPartnerId: null,
-      date: new Date().toISOString(),
-      items: snapshotItems,
-      subtotal: totals.subtotal,
-      deliveryFee: totals.deliveryFee,
-      discount: totals.discount,
-      total: totals.total,
-      status: 'PLACED',
-      address: selectedAddress,
-      payment
-    };
+      if (trimmedCustom || isTemporaryId || !selectedExisting) {
+        const addressLine = trimmedCustom
+          ? trimmedCustom
+          : selectedAddress.line || (user as any)?.deliveryLocation || 'Main Campus Delivery Point';
 
-    setIsSubmitted(true);
-    createOrder(order);
-    clearCart();
-    setTimeout(() => {
-      navigate(`/orders/${order.id}`, { state: { justPlaced: true } });
-    }, 200);
+        const createRes = await api.createAddress({
+          addressLine,
+          label: trimmedCustom ? 'Room / Department' : selectedAddress.label || 'Campus Delivery',
+          campusId: user.campusId || 'sns',
+          landmark: selectedAddress.landmark || 'SNS Campus',
+          city: selectedAddress.city || 'Coimbatore',
+          state: selectedAddress.state || 'Tamil Nadu',
+          postalCode: selectedAddress.postalCode || '641004'
+        });
+
+        if (createRes?.data?.id) {
+          effectiveAddressId = createRes.data.id;
+          if (refreshUser) {
+            refreshUser().catch(() => {});
+          }
+        } else {
+          throw new Error('Failed to register delivery address with campus server.');
+        }
+      }
+
+      const createdOrder = await createOrder({
+        deliveryAddressId: effectiveAddressId,
+        paymentMethod: payment,
+        deliveryFee: totals.deliveryFee,
+        discount: totals.discount
+      });
+
+      setIsSubmitted(true);
+      clearCart();
+      navigate(`/orders/${createdOrder.id}`, { state: { justPlaced: true } });
+    } catch (err: any) {
+      console.error('Checkout failed:', err);
+      toast.error(err?.message || 'Failed to place order. Please try again.');
+    } finally {
+      setIsPlacing(false);
+    }
   };
 
   return (
@@ -181,7 +197,7 @@ export default function Checkout() {
                         onClick={() => setAddressId(a.id || '')}
                         className={`relative p-6 cursor-pointer transition-all duration-200 border-2 ${
                           isSelected
-                            ? 'border-[var(--fb-ink)] bg-black/5'
+                            ? 'border-[var(--fb-ink)] bg-black/5 dark:bg-white/5'
                             : 'border-[var(--fb-border)] hover:border-[var(--fb-border)] bg-[var(--fb-surface)]'
                         }`}
                       >
@@ -253,7 +269,7 @@ export default function Checkout() {
                       onClick={() => setPayment(id)}
                       className={`relative p-6 cursor-pointer transition-all duration-200 flex flex-col justify-between border-2 ${
                         isSelected
-                          ? 'border-[var(--fb-ink)] bg-black/5'
+                          ? 'border-[var(--fb-ink)] bg-black/5 dark:bg-white/5'
                           : 'border-[var(--fb-border)] hover:border-[var(--fb-border)] bg-[var(--fb-surface)]'
                       }`}
                     >
@@ -342,7 +358,7 @@ export default function Checkout() {
               <button
                 onClick={submit}
                 disabled={isPlacing}
-                className="w-full btn-action-primary transition-all duration-200"
+                className={`w-full btn-action-primary transition-all duration-200 ${isPlacing ? 'opacity-80 cursor-not-allowed' : ''}`}
               >
                 {isPlacing ? (
                   <span className="inline-flex items-center gap-2">

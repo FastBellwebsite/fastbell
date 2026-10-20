@@ -6,17 +6,20 @@ import { Search, X, ArrowLeft, ArrowUpDown, Compass } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { useAuth } from '@/context/AuthContext';
 import { FastBellSelect } from '@/components/FastBellSelect';
+import { isProductInStock, isProductAvailable } from '@/selectors/productSelectors';
+import { Category } from '@/types';
 
 export default function CategoryPage() {
-  const { products, stores } = useStore();
+  const { products, stores, categories: ctxCategories, refreshData } = useStore();
   const { user } = useAuth();
   const { categoryId } = useParams();
   const navigate = useNavigate();
-  const categories = storage.getCategories();
+  const categories = ctxCategories && ctxCategories.length > 0 ? ctxCategories : storage.getCategories();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    refreshData();
   }, []);
 
   const [query, setQuery] = useState('');
@@ -25,28 +28,81 @@ export default function CategoryPage() {
 
   const campusId = user?.campusId || 'sns';
 
-  const category = categories.find(c => c.id === categoryId || c.slug === categoryId) || {
-    id: categoryId || 'all',
-    name: 'Campus Items',
-    description: 'Explore campus essentials',
-    icon: 'Utensils',
-    slug: categoryId
-  };
+  const decodedId = decodeURIComponent(categoryId || '').trim();
+  const decodedLower = decodedId.toLowerCase();
+
+  const category: Category = useMemo(() => {
+    const found = categories.find(c => {
+      const cId = c.id.toLowerCase();
+      const cSlug = (c.slug || '').toLowerCase();
+      const cName = c.name.toLowerCase();
+      return (
+        cId === decodedLower ||
+        cSlug === decodedLower ||
+        cName === decodedLower ||
+        cId === (categoryId || '').toLowerCase() ||
+        cSlug === (categoryId || '').toLowerCase() ||
+        cName === (categoryId || '').toLowerCase()
+      );
+    });
+
+    if (found) return found;
+
+    return {
+      id: categoryId || 'all',
+      name: decodedId || 'Campus Items',
+      description: 'Explore campus essentials',
+      icon: 'Utensils',
+      slug: decodedId || categoryId || 'all'
+    };
+  }, [categories, categoryId, decodedLower, decodedId]);
 
   // Stores in this category for this campus
   const categoryStores = useMemo(() => {
-    return stores.filter(s => s.campusId === campusId && s.category === category.id);
-  }, [stores, campusId, category.id]);
+    const targetId = category.id.toLowerCase();
+    const targetSlug = (category.slug || '').toLowerCase();
+    const targetName = category.name.toLowerCase();
+
+    return stores.filter(s => {
+      const matchCampus = !s.campusId || s.campusId === campusId;
+      if (!matchCampus) return false;
+      const sCat = (s.category || '').toLowerCase();
+      const sCatId = ((s as any).categoryId || '').toLowerCase();
+      return (
+        sCat === targetId ||
+        sCat === targetSlug ||
+        sCat === targetName ||
+        sCatId === targetId ||
+        sCatId === targetSlug ||
+        sCatId === targetName
+      );
+    });
+  }, [stores, campusId, category]);
 
   // Products in this category for this campus
   const categoryProducts = useMemo(() => {
-    const campusStoreIds = new Set(stores.filter(s => s.campusId === campusId).map(s => s.id));
+    const campusStores = stores.filter(s => !s.campusId || s.campusId === campusId);
+    const campusStoreIds = new Set(campusStores.map(s => s.id));
+    const targetId = category.id.toLowerCase();
+    const targetSlug = (category.slug || '').toLowerCase();
+    const targetName = category.name.toLowerCase();
 
     let list = products.filter(p => {
-      const matchCat = p.category === category.id || (p as any).categoryId === category.id || p.category === category.slug;
+      const pCat = (p.category || '').toLowerCase();
+      const pCatId = (p.categoryId || (p as any).categoryId || '').toLowerCase();
+
+      const matchCat =
+        targetId === 'all' ||
+        pCat === targetId ||
+        pCat === targetSlug ||
+        pCat === targetName ||
+        pCatId === targetId ||
+        pCatId === targetSlug ||
+        pCatId === targetName;
+
       if (!matchCat) return false;
-      if (!campusStoreIds.has(p.storeId)) return false;
-      if (inStockOnly && !p.isAvailable) return false;
+      if (campusStoreIds.size > 0 && p.storeId && !campusStoreIds.has(p.storeId)) return false;
+      if (inStockOnly && !isProductInStock(p)) return false;
       if (!query.trim()) return true;
 
       const q = query.toLowerCase().trim();
@@ -56,10 +112,12 @@ export default function CategoryPage() {
       );
     });
 
-    // Sort available items first
+    // Sort available in-stock items first
     list = [...list].sort((a, b) => {
-      if (a.isAvailable && !b.isAvailable) return -1;
-      if (!a.isAvailable && b.isAvailable) return 1;
+      const availA = isProductAvailable(a);
+      const availB = isProductAvailable(b);
+      if (availA && !availB) return -1;
+      if (!availA && availB) return 1;
       return 0;
     });
 
@@ -67,7 +125,18 @@ export default function CategoryPage() {
     if (sort === 'price-desc') list = [...list].sort((a, b) => b.price - a.price);
 
     return list;
-  }, [products, stores, campusId, category.id, category.slug, inStockOnly, query, sort]);
+  }, [products, stores, campusId, category, inStockOnly, query, sort]);
+
+  const artworkSrc = useMemo(() => {
+    const id = category.id.toLowerCase();
+    const slug = (category.slug || '').toLowerCase();
+    if (id === 'cat-food' || slug === 'food') return '/products/cheese-grilled-sandwich.webp';
+    if (id === 'cat-grocery' || slug === 'groceries') return '/products/amul-milk.webp';
+    if (id === 'cat-stationery' || slug === 'stationery') return '/products/classmate-notebook.webp';
+    if (id === 'cat-laundry' || slug === 'laundry') return '/products/daily-wash.webp';
+    if (id === 'cat-care' || slug === 'personal-care') return '/products/dettol-sanitizer.webp';
+    return category.icon || '/products/dettol-sanitizer.webp';
+  }, [category]);
 
   return (
     <div className="min-h-screen bg-[var(--fb-bg)] pb-12 pt-6 md:pt-8 selection:bg-[var(--fb-blue)] selection:text-white">
@@ -89,13 +158,7 @@ export default function CategoryPage() {
             <div className="absolute right-0 top-0 bottom-0 w-[50%] md:w-[40%] overflow-hidden mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-700 ease-out opacity-20 group-hover:opacity-40 pointer-events-none">
               <div className="absolute inset-0 bg-gradient-to-r from-[var(--fb-bg)] via-transparent to-transparent z-10" />
               <img 
-                src={
-                  category.id === 'cat-food' ? '/products/cheese-grilled-sandwich.webp' :
-                  category.id === 'cat-grocery' ? '/products/amul-milk.webp' :
-                  category.id === 'cat-stationery' ? '/products/classmate-notebook.webp' :
-                  category.id === 'cat-laundry' ? '/products/daily-wash.webp' :
-                  '/products/dettol-sanitizer.webp'
-                }
+                src={artworkSrc}
                 className="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-700" 
                 alt={category.name} 
               />
@@ -110,7 +173,7 @@ export default function CategoryPage() {
                 {categoryStores.length > 0 && (
                   <>
                     <span className="text-[var(--fb-border)]">|</span>
-                    <Link to={`/stores?category=${category.id}`} className="hover:text-[var(--fb-blue)] transition-colors underline font-bold">
+                    <Link to={`/stores?category=${category.slug || category.id}`} className="hover:text-[var(--fb-blue)] transition-colors underline font-bold">
                       {categoryStores.length} campus store{categoryStores.length > 1 ? 's' : ''}
                     </Link>
                   </>
@@ -121,10 +184,14 @@ export default function CategoryPage() {
             {/* Sibling Categories (Typographic list) */}
             <div className="flex items-center gap-6 overflow-x-auto no-scrollbar md:pb-0">
               {categories.map(c => {
-                const isActive = c.id === category.id;
+                const isActive =
+                  c.id.toLowerCase() === category.id.toLowerCase() ||
+                  (c.slug && c.slug.toLowerCase() === (category.slug || '').toLowerCase());
+
                 return (
                   <button
                     key={c.id}
+                    type="button"
                     onClick={() => navigate(`/category/${c.id}`)}
                     className={`text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors cursor-pointer pb-1 border-b-2 ${
                       isActive
@@ -155,6 +222,7 @@ export default function CategoryPage() {
             />
             {query && (
               <button
+                type="button"
                 onClick={() => setQuery('')}
                 className="text-[var(--fb-text-muted)] hover:text-[var(--fb-ink)] px-2 cursor-pointer font-bold transition-colors"
               >
@@ -211,6 +279,7 @@ export default function CategoryPage() {
             </p>
             {query && (
               <button
+                type="button"
                 onClick={() => setQuery('')}
                 className="btn-action-primary"
               >

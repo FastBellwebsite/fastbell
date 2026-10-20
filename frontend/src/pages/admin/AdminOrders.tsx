@@ -1,10 +1,10 @@
 import { useOrder } from '@/context/OrderContext';
 import { useStore } from '@/context/StoreContext';
 import { StatusBadge } from '@/components/UI';
-import { Package, Clock, ShieldCheck } from 'lucide-react';
+import { Package, Clock, ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function AdminOrders() {
-  const { orders } = useOrder();
+  const { orders, isLoading, error, refreshOrders } = useOrder();
   const { stores } = useStore();
 
   return (
@@ -19,10 +19,34 @@ export default function AdminOrders() {
         <h1 className="font-display text-3xl font-extrabold text-[var(--fb-text-primary)]">
           Platform Orders ({orders.length})
         </h1>
+
         <p className="text-xs font-semibold text-[var(--fb-text-secondary)] mt-1">
           Complete cross-campus transaction logs, store fulfillments, and order statuses.
         </p>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 flex items-center justify-between text-xs text-red-900 dark:text-red-200 font-medium">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-red-600 shrink-0" />
+            <span>Failed to load platform orders: {error}</span>
+          </div>
+          <button
+            onClick={() => refreshOrders()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-red-100 hover:bg-red-200 dark:bg-red-900/60 dark:hover:bg-red-900/80 text-red-900 dark:text-red-100 rounded-md transition-colors"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
+
+      {isLoading && orders.length === 0 && (
+        <div className="p-8 text-center bg-[var(--fb-surface)] border border-[var(--fb-border)] rounded-2xl mb-6">
+          <div className="w-8 h-8 border-2 border-[var(--fb-border)] border-t-[var(--fb-brand)] rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-xs font-semibold text-[var(--fb-text-secondary)]">Fetching platform order transactions...</p>
+        </div>
+      )}
+
 
       <div className="bg-[var(--fb-surface)] border border-[var(--fb-border)] rounded-2xl overflow-hidden shadow-soft">
         <div className="overflow-x-auto">

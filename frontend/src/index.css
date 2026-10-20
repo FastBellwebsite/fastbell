@@ -21,6 +21,8 @@
 
     /* FastBell Definitive Color Identity - Light Mode */
     --fb-bg: #FAFAF7;
+    --fb-background: var(--fb-bg);
+    --fb-text-primary: var(--fb-text);
     --fb-surface: #FFFFFF;
     --fb-surface-elevated: #FFFFFF;
     --fb-surface-raised: #FFFFFF;
@@ -80,6 +82,8 @@
   :root.dark, html.dark, .dark {
     /* FastBell Definitive Color Identity - Dark Mode */
     --fb-bg: #090B10; /* Deep Ink background */
+    --fb-background: var(--fb-bg);
+    --fb-text-primary: var(--fb-text);
     --fb-surface: #10131A; /* Slightly lighter surface */
     --fb-surface-elevated: #161A24; /* Elevated layers */
     --fb-surface-raised: #1A1F2B;

@@ -1,6 +1,5 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { mockStoreService } from '@/services/mockStoreService';
 import { VendorProfile, Store } from '@/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FastBellSelect } from '@/components/FastBellSelect';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { getCurrentLocation } from '@/utils/location';
 
 const schema = z.object({
   name: z.string().min(2, 'Owner Full Name is required.'),
@@ -59,35 +59,9 @@ export default function RegisterVendor() {
 
   const onSubmit = async (data: FormValues) => {
     try {
+      const currentLocation = await getCurrentLocation();
       const vendorId = `VEN-${Date.now()}`;
       const storeId = `STORE-${Date.now()}`;
-
-      const newStore: Store = {
-        id: storeId,
-        campusId: 'sns',
-        vendorId,
-        name: data.storeName.trim(),
-        category: data.category,
-        description: data.description.trim(),
-        locationLabel: `${data.address.trim()}, ${data.locality.trim()}`,
-        locality: data.locality.trim(),
-        city: data.city.trim(),
-        latitude: 11.1271,
-        longitude: 76.9966,
-        serviceRadiusKm: 6,
-        isOpen: true,
-        rating: 5.0,
-        image:
-          data.category === 'cat-food'
-            ? 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80'
-            : data.category === 'cat-stationery'
-            ? 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=800&q=80'
-            : data.category === 'cat-laundry'
-            ? 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800&q=80'
-            : 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&q=80',
-        distanceFromCampus: 150,
-        deliveryMinutes: 15
-      };
 
       const newUser: VendorProfile = {
         id: vendorId,
@@ -102,10 +76,13 @@ export default function RegisterVendor() {
         businessName: data.storeName.trim(),
         category: data.category,
         description: data.description.trim(),
+        locationLabel: `${data.address.trim()}, ${data.locality.trim()}`,
+        deliveryMinutes: 15,
+        imageUrl: data.category === 'cat-food' ? 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80' : data.category === 'cat-stationery' ? 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=800&q=80' : data.category === 'cat-laundry' ? 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800&q=80' : 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&q=80',
         status: 'Active',
         location: {
-          latitude: 11.1271,
-          longitude: 76.9966,
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
           address: data.address.trim(),
           locality: data.locality.trim(),
           city: data.city.trim(),
@@ -114,16 +91,14 @@ export default function RegisterVendor() {
         }
       };
 
-      mockStoreService.createStore(newStore);
       await register(newUser);
+      toast.success(`Store ${data.storeName.trim()} created and vendor registered!`);
 
-      toast.success(`Store "${newStore.name}" created and vendor registered!`);
       navigate('/vendor');
     } catch (err: any) {
-      toast.error(err?.message || 'Vendor registration failed. Try again.');
+      toast.error(err?.message || 'Unable to get your current location. Please allow location access and try again.');
     }
   };
-
   return (
     <div className="min-h-screen bg-[var(--fb-bg)] flex flex-col md:flex-row selection:bg-[var(--fb-blue)] selection:text-white fade-in">
       {/* LEFT SIDE - Brand World */}

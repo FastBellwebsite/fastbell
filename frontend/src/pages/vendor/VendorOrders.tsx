@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useOrder } from '@/context/OrderContext';
 import { useAuth } from '@/context/AuthContext';
@@ -11,17 +11,38 @@ import { Store, OrderStatus } from '@/types';
 export default function VendorOrders() {
   const { user } = useAuth();
   const { stores } = useStore();
-  const { orders, acceptOrder, markPreparing, markReady } = useOrder();
+  const { orders, refreshOrders, acceptOrder, markPreparing, markReady } = useOrder();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refreshOrders().catch(() => {});
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [refreshOrders]);
+
   const [selectedStatusTab, setSelectedStatusTab] = useState<'ALL' | 'NEW' | 'PREPARING' | 'READY' | 'COMPLETED'>('ALL');
 
   const userStoreId = (user as any)?.storeId;
+  const userVendorProfileId = (user as any)?.vendorProfileId;
+  const userStoreIds: string[] = (user as any)?.storeIds || [];
+
   const vendorStores = stores.filter(
-    (s: Store) => s.vendorId === user?.id || (userStoreId && s.id === userStoreId)
+    (s: Store) =>
+      s.vendorId === user?.id ||
+      (userVendorProfileId && s.vendorId === userVendorProfileId) ||
+      (userStoreId && s.id === userStoreId) ||
+      userStoreIds.includes(s.id)
   );
   const vendorStoreIds = vendorStores.map((s: Store) => s.id);
-  const effectiveStoreIds = vendorStoreIds.length > 0 ? vendorStoreIds : (userStoreId ? [userStoreId] : []);
+  const effectiveStoreIds = Array.from(
+    new Set([
+      ...vendorStoreIds,
+      ...(userStoreId ? [userStoreId] : []),
+      ...userStoreIds
+    ])
+  );
 
-  const vendorOrders = getOrdersForVendor(orders, effectiveStoreIds);
+  const vendorOrders = effectiveStoreIds.length > 0 ? getOrdersForVendor(orders, effectiveStoreIds) : orders;
 
   const newOrdersCount = vendorOrders.filter(o => o.status === 'PLACED').length;
   const preparingOrdersCount = vendorOrders.filter(o => ['ACCEPTED', 'PREPARING'].includes(o.status)).length;
@@ -57,8 +78,8 @@ export default function VendorOrders() {
         </div>
 
         {newOrdersCount > 0 && (
-          <div className="flex items-center gap-2 bg-[var(--fb-warning)] border border-[var(--fb-warning)] text-[var(--fb-warning)] px-4 py-2 rounded-xl text-xs font-bold animate-pulse">
-            <Sparkles size={14} className="text-[var(--fb-warning)]" />
+          <div className="flex items-center gap-2 bg-[var(--fb-warning)] border border-[var(--fb-warning)] text-white px-4 py-2 rounded-xl text-xs font-bold animate-pulse">
+            <Sparkles size={14} className="text-white" />
             <span>{newOrdersCount} new {newOrdersCount === 1 ? 'order needs' : 'orders need'} your immediate acceptance!</span>
           </div>
         )}
@@ -88,7 +109,7 @@ export default function VendorOrders() {
                 selectedStatusTab === tab.id
                   ? 'bg-black/20 text-white'
                   : tab.highlight
-                  ? 'bg-[var(--fb-warning)] text-[var(--fb-warning)]'
+                  ? 'bg-[var(--fb-warning)] text-white'
                   : 'bg-[var(--fb-background)] text-[var(--fb-text-muted)]'
               }`}
             >
@@ -187,7 +208,7 @@ export default function VendorOrders() {
                   {o.status === 'ACCEPTED' && (
                     <button
                       onClick={() => markPreparing(o.id)}
-                      className="h-11 px-5 rounded-xl font-bold text-xs bg-black hover:bg-black/80 text-white shadow-soft flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      className="h-11 px-5 rounded-xl font-bold text-xs bg-[var(--fb-blue)] hover:bg-[var(--fb-blue-dark)] text-white shadow-soft flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                     >
                       <ArrowRight className="h-4 w-4" /> Start Preparing
                     </button>
@@ -203,7 +224,7 @@ export default function VendorOrders() {
                   )}
 
                   {o.status === 'READY_FOR_PICKUP' && (
-                    <div className="h-11 px-4 rounded-xl bg-[var(--fb-warning)] text-[var(--fb-warning)] border border-[var(--fb-warning)] font-bold text-xs flex items-center justify-center text-center">
+                    <div className="h-11 px-4 rounded-xl bg-[var(--fb-warning)] text-white border border-[var(--fb-warning)] font-bold text-xs flex items-center justify-center text-center shadow-xs">
                       Waiting for Rider Pickup
                     </div>
                   )}
@@ -221,13 +242,13 @@ export default function VendorOrders() {
                   )}
 
                   {o.status === 'DELIVERED' && (
-                    <div className="h-11 px-4 rounded-xl bg-[#E8F5E9] text-[var(--fb-success)] border border-[var(--fb-success)] font-bold text-xs flex items-center justify-center text-center">
+                    <div className="h-11 px-4 rounded-xl bg-[#E8F5E9] dark:bg-emerald-950/40 text-[var(--fb-success)] dark:text-emerald-400 border border-[var(--fb-success)]/30 font-bold text-xs flex items-center justify-center text-center">
                       Successfully Delivered
                     </div>
                   )}
 
                   {o.status === 'CANCELLED' && (
-                    <div className="h-11 px-4 rounded-xl bg-[#FFEBEE] text-[var(--fb-danger)] font-bold text-xs flex items-center justify-center border border-[var(--fb-danger)] text-center">
+                    <div className="h-11 px-4 rounded-xl bg-[#FFEBEE] dark:bg-rose-950/40 text-[var(--fb-danger)] dark:text-rose-400 font-bold text-xs flex items-center justify-center border border-[var(--fb-danger)]/30 text-center">
                       Cancelled
                     </div>
                   )}

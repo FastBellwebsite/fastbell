@@ -33,7 +33,7 @@ export default function DeliveryProfile() {
       <div className="card p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[var(--fb-blue-soft)] text-white font-display text-2xl font-bold">
+            <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] border border-[var(--fb-border)] font-display text-2xl font-bold">
               <Bike className="h-7 w-7" />
             </div>
             <div>
@@ -49,7 +49,7 @@ export default function DeliveryProfile() {
             className={`rounded-full px-4 py-2 text-xs font-bold transition-all ${
               isOnline
                 ? 'bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] border border-[var(--fb-blue)]'
-                : 'bg-background-100 text-[var(--fb-ink)] border border-background-200'
+                : 'bg-[var(--fb-bg)] text-[var(--fb-text-muted)] border border-[var(--fb-border)]'
             }`}
           >
             {isOnline ? '● Available' : '○ Offline'}
@@ -92,8 +92,8 @@ export default function DeliveryProfile() {
 
 function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[#ebe3da] p-3">
-      <span className="grid h-9 w-9 place-items-center rounded-lg bg-background-50 text-[var(--fb-blue)] shrink-0">
+    <div className="flex items-center gap-3 rounded-xl border border-[var(--fb-border)] p-3">
+      <span className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--fb-blue-soft)] text-[var(--fb-blue)] shrink-0">
         {icon}
       </span>
       <div>

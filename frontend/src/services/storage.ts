@@ -79,7 +79,7 @@ export const storage = {
           if (Array.isArray(data.products)) {
             data.products = data.products.map(p => {
               const seed = seedProducts.find(sp => sp.id === p.id);
-              if (seed && seed.image !== p.image) {
+              if (seed && !p.image?.startsWith('/uploads/') && seed.image !== p.image) {
                 hasMigration = true;
                 return { ...p, image: seed.image };
               }
@@ -181,6 +181,15 @@ export const storage = {
 
   // Categories
   getCategories: (): Category[] => storage.read().categories,
+  setCategories: (categories: Category[]) => {
+    try {
+      const d = storage.read();
+      d.categories = categories;
+      storage.write(d);
+    } catch {
+      // ignore
+    }
+  },
 
   // User-scoped Carts Persistence
   getUserCart: (userId: string): CartItem[] => {
