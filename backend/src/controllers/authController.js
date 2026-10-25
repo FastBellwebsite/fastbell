@@ -1,52 +1,12 @@
-<<<<<<< HEAD
-=======
 const express = require('express');
 const router = express.Router();
 
->>>>>>> origin/main
 const prisma = require('../utils/prisma');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateToken } = require('../utils/jwt');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-<<<<<<< HEAD
-const register = async (req, res, next) => {
-  try {
-    const { name, email, phone, password, campusId } = req.body;
-
-    // Validation
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-      return res.status(400).json({ success: false, message: 'Name is required' });
-    }
-
-    if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
-      return res.status(400).json({ success: false, message: 'A valid email is required' });
-    }
-
-    if (!phone || typeof phone !== 'string' || phone.trim() === '') {
-      return res.status(400).json({ success: false, message: 'Phone number is required' });
-    }
-
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password is required and must be at least 6 characters long',
-      });
-    }
-
-    if (!campusId || typeof campusId !== 'string' || campusId.trim() === '') {
-      return res.status(400).json({ success: false, message: 'Campus ID is required' });
-    }
-
-    // Check if campus exists
-    const campus = await prisma.campus.findUnique({
-      where: { id: campusId.trim() },
-    });
-
-    if (!campus) {
-      return res.status(400).json({ success: false, message: 'Specified campus does not exist' });
-=======
 const ROLE_MAP = {
   student: 'STUDENT',
   vendor: 'VENDOR',
@@ -209,52 +169,10 @@ const register = async (req, res, next) => {
         success: false,
         message: 'Password must be at least 6 characters.'
       });
->>>>>>> origin/main
     }
 
     const normalizedEmail = email.trim().toLowerCase();
 
-<<<<<<< HEAD
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    if (existingUser) {
-      return res.status(409).json({ success: false, message: 'Email already exists' });
-    }
-
-    // Hash password
-    const passwordHash = await hashPassword(password);
-
-    // Create user
-    const newUser = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: normalizedEmail,
-        phone: phone.trim(),
-        passwordHash,
-        campusId: campus.id,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        campusId: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    const token = generateToken({ id: newUser.id });
-
-    return res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      token,
-      user: newUser,
-=======
     const normalizedRole = ROLE_MAP[role?.toLowerCase()];
 
     if (!normalizedRole) {
@@ -410,7 +328,6 @@ const register = async (req, res, next) => {
       message: 'Registration successful.',
       token,
       user: buildUserResponse(user)
->>>>>>> origin/main
     });
   } catch (error) {
     next(error);
@@ -419,21 +336,6 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-<<<<<<< HEAD
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required',
-      });
-    }
-
-    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-
-    const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-=======
     const { email, password, role } = req.body;
 
     if (!email || !EMAIL_REGEX.test(email.trim())) {
@@ -457,40 +359,11 @@ const login = async (req, res, next) => {
         email: normalizedEmail
       },
       include: userInclude
->>>>>>> origin/main
     });
 
     if (!user) {
       return res.status(401).json({
         success: false,
-<<<<<<< HEAD
-        message: 'Invalid email or password',
-      });
-    }
-
-    const isMatch = await comparePassword(password, user.passwordHash);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
-    }
-
-    const token = generateToken({ id: user.id });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        campusId: user.campusId,
-      },
-=======
         message: 'Invalid email or password.'
       });
     }
@@ -534,7 +407,6 @@ const login = async (req, res, next) => {
       message: 'Login successful.',
       token,
       user: buildUserResponse(user)
->>>>>>> origin/main
     });
   } catch (error) {
     next(error);
@@ -543,18 +415,6 @@ const login = async (req, res, next) => {
 
 const getMe = async (req, res, next) => {
   try {
-<<<<<<< HEAD
-    // req.user is set by authMiddleware
-    return res.status(200).json({
-      success: true,
-      user: {
-        id: req.user.id,
-        name: req.user.name,
-        email: req.user.email,
-        phone: req.user.phone,
-        campusId: req.user.campusId,
-      },
-=======
     const user = await prisma.user.findUnique({
       where: {
         id: req.user.id
@@ -572,7 +432,6 @@ const getMe = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       user: buildUserResponse(user)
->>>>>>> origin/main
     });
   } catch (error) {
     next(error);
@@ -582,9 +441,5 @@ const getMe = async (req, res, next) => {
 module.exports = {
   register,
   login,
-<<<<<<< HEAD
-  getMe,
-=======
   getMe
->>>>>>> origin/main
 };

@@ -7,22 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-<<<<<<< HEAD
-model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  phone        String?
-  passwordHash String
-  campusId     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  campus    Campus?   @relation(fields: [campusId], references: [id], onDelete: SetNull)
-  addresses Address[]
-  cart      Cart?
-  orders    Order[]
-=======
 enum UserRole {
   STUDENT
   VENDOR
@@ -119,22 +103,10 @@ model StudentProfile {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   campus Campus @relation(fields: [campusId], references: [id], onDelete: Restrict)
->>>>>>> origin/main
 
   @@index([campusId])
 }
 
-<<<<<<< HEAD
-model Campus {
-  id        String   @id @default(uuid())
-  name      String
-  location  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users   User[]
-  vendors Vendor[]
-=======
 model VendorProfile {
   id                 String             @id @default(uuid())
   userId             String             @unique
@@ -171,7 +143,6 @@ model DeliveryPartnerProfile {
 
   @@index([campusId])
   @@index([availabilityStatus])
->>>>>>> origin/main
 }
 
 model Address {
@@ -179,15 +150,6 @@ model Address {
   userId      String
   label       String?
   addressLine String
-<<<<<<< HEAD
-  city        String
-  state       String
-  postalCode  String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-=======
   locality    String?
   hostelName  String?
   roomNumber  String?
@@ -203,46 +165,10 @@ model Address {
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders Order[]
->>>>>>> origin/main
 
   @@index([userId])
 }
 
-<<<<<<< HEAD
-model Vendor {
-  id          String   @id @default(uuid())
-  name        String
-  description String?  @db.Text
-  phone       String?
-  email       String?
-  campusId    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  campus   Campus?   @relation(fields: [campusId], references: [id], onDelete: SetNull)
-  products Product[]
-
-  @@index([campusId])
-}
-
-model Product {
-  id          String   @id @default(uuid())
-  vendorId    String
-  name        String
-  description String?  @db.Text
-  price       Decimal  @db.Decimal(10, 2)
-  imageUrl    String?  @db.VarChar(1000)
-  category    String
-  isAvailable Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  vendor     Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  cartItems  CartItem[]
-  orderItems OrderItem[]
-
-  @@index([vendorId])
-=======
 model Store {
   id          String   @id @default(uuid())
   vendorId    String   @unique
@@ -306,26 +232,16 @@ model Product {
   @@index([storeId])
   @@index([categoryId])
   @@index([isAvailable])
->>>>>>> origin/main
 }
 
 model Cart {
   id        String   @id @default(uuid())
-<<<<<<< HEAD
-  userId    String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items CartItem[]
-=======
   studentId String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   student User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
   items   CartItem[]
->>>>>>> origin/main
 }
 
 model CartItem {
@@ -333,53 +249,18 @@ model CartItem {
   cartId    String
   productId String
   quantity  Int      @default(1)
-<<<<<<< HEAD
-=======
   unitPrice Decimal  @db.Decimal(10, 2)
->>>>>>> origin/main
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-<<<<<<< HEAD
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([cartId, productId])
-  @@index([cartId])
-=======
   product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@unique([cartId, productId])
->>>>>>> origin/main
   @@index([productId])
 }
 
 model Order {
-<<<<<<< HEAD
-  id          String   @id @default(uuid())
-  userId      String
-  status      String   @default("PENDING")
-  totalAmount Decimal  @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items   OrderItem[]
-  payment Payment?
-  delivery Delivery?
-
-  @@index([userId])
-}
-
-model OrderItem {
-  id        String   @id @default(uuid())
-  orderId   String
-  productId String
-  quantity  Int      @default(1)
-  price     Decimal  @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-=======
   id                String        @id @default(uuid())
   orderNumber       String        @unique
   studentId         String
@@ -417,7 +298,6 @@ model OrderItem {
   unitPrice   Decimal  @db.Decimal(10, 2)
   totalPrice  Decimal  @db.Decimal(10, 2)
   createdAt   DateTime @default(now())
->>>>>>> origin/main
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -427,18 +307,6 @@ model OrderItem {
 }
 
 model Payment {
-<<<<<<< HEAD
-  id               String   @id @default(uuid())
-  orderId          String   @unique
-  amount           Decimal  @db.Decimal(10, 2)
-  currency         String   @default("INR")
-  status           String   @default("PENDING")
-  paymentMethod    String
-  transactionId    String?
-  gatewayReference String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-=======
   id                   String        @id @default(uuid())
   orderId              String        @unique
   method               String
@@ -447,22 +315,11 @@ model Payment {
   transactionReference String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
->>>>>>> origin/main
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Delivery {
-<<<<<<< HEAD
-  id        String   @id @default(uuid())
-  orderId   String   @unique
-  status    String   @default("PENDING")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-}
-=======
   id                String         @id @default(uuid())
   orderId           String         @unique
   deliveryPartnerId String?
@@ -480,4 +337,3 @@ model Delivery {
   @@index([deliveryPartnerId])
   @@index([status])
 }
->>>>>>> origin/main
